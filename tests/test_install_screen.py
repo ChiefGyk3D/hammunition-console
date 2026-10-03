@@ -50,7 +50,7 @@ def test_profile_state_degrades_to_unknown(entry: dict[str, Any], expected: str)
 
 
 def test_null_summary_and_missing_fields_render_blank_not_none() -> None:
-    entry = {"name": "p", "stage": None, "summary": None, "packages": [], "consent_gated": None, "documentation": None}
+    entry: dict[str, Any] = {"name": "p", "stage": None, "summary": None, "packages": [], "consent_gated": None, "documentation": None}
     assert "None" not in profile_text(entry) and profile_text(entry).startswith("p")
     assert "None" not in unit_text({"name": "u", "status": None, "summary": None, "resolves_here": None})
     assert "not here" in unit_text({"name": "u", "status": "supported", "summary": "s", "resolves_here": None})
