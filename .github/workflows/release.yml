@@ -1,7 +1,8 @@
 # Cut a release when a v* tag is pushed. verify refuses a tag that disagrees with the
 # tree; test runs the suite; publish creates the GitHub release with the changelog
-# section, the sha256 of GitHub's source archive for the tag (fetched twice and
-# compared, printed in the job log) and a SHA256SUMS file attached. That digest is
+# section, GitHub's source archive for the tag (fetched twice and compared) attached
+# as hammunition-console-<version>.tar.gz with its sha256 printed in the job log and a
+# SHA256SUMS over the attached files. That digest is
 # the one the Hammunition catalog unit pins. Actions are pinned by commit, resolved
 # with `git ls-remote --tags` on 2026-10-03. The tag reaches shell only through env,
 # never through an expression inside run.
@@ -69,20 +70,25 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          awk -v v="${TAG}" 'index($0, "## " v) == 1 {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
+          awk -v v="${TAG}" 'index($0, "## " v " ") == 1 {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
           test -s notes.md
+          ver="${TAG#v}"
+          name="hammunition-console-${ver}.tar.gz"
           url="https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz"
-          curl -fsSL "$url" -o a.tgz
-          curl -fsSL "$url" -o b.tgz
-          cmp a.tgz b.tgz
-          sum="$(sha256sum a.tgz | cut -d' ' -f1)"
+          mkdir assets
+          curl -fsSL "$url" -o "assets/${name}"
+          curl -fsSL "$url" -o second.tgz
+          cmp "assets/${name}" second.tgz
+          sum="$(sha256sum "assets/${name}" | cut -d' ' -f1)"
           echo "source archive: ${url}"
+          echo "asset: ${name}"
           echo "sha256: ${sum}"
-          printf '%s  %s\n' "$sum" "hammunition-console-${TAG}.tar.gz" > SHA256SUMS
+          (cd assets && sha256sum ./* > SHA256SUMS)
           {
             echo
             echo "Source archive: ${url}"
             echo "sha256: ${sum}"
-            echo "bytes: $(stat -c %s a.tgz)"
+            echo "asset: ${name}"
+            echo "bytes: $(stat -c %s "assets/${name}")"
           } >> notes.md
-          gh release create "$TAG" SHA256SUMS --repo "$REPO" --title "hammunition-console $TAG" --notes-file notes.md
+          gh release create "$TAG" "assets/${name}" assets/SHA256SUMS --repo "$REPO" --title "hammunition-console $TAG" --notes-file notes.md

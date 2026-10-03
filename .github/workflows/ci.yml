@@ -24,9 +24,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  fragments:
+    name: a changelog fragment for a code change
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: the range needs a fragment when it changes the package
+        env:
+          BASE: ${{ github.base_ref }}
+        run: python3 scripts/changelog.py check-pr --base "origin/$BASE"
+
   lint:
     name: ruff, mypy --strict, headers
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,6 +58,7 @@ jobs:
   test:
     name: tests (Python ${{ matrix.python }}, urwid ${{ matrix.urwid }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -62,6 +79,7 @@ jobs:
   archive-ubuntu:
     name: tests and archive install (Ubuntu 24.04 archive urwid, system python3)
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -73,13 +91,16 @@ jobs:
         run: |
           set -euo pipefail
           work="$(mktemp -d)"
-          git archive --prefix=src/ HEAD | tar -x -C "$work"
-          (cd "$work/src" && ./install.sh --prefix "$work/prefix")
+          ver="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' hammunition_console/__init__.py)"
+          git archive --format=tar.gz --prefix="hammunition-console-${ver}/" HEAD > "$work/a.tar.gz"
+          tar -xzf "$work/a.tar.gz" -C "$work"
+          (cd "$work/hammunition-console-${ver}" && ./install.sh --prefix "$work/prefix")
           "$work/prefix/bin/hammunition-console" --version
 
   archive-debian:
     name: tests and archive install (Debian 13 archive urwid, system python3)
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     container: debian:trixie
     steps:
       - run: apt-get update -qq && apt-get install -y -qq python3-urwid python3-pytest git
@@ -93,13 +114,16 @@ jobs:
           set -eu
           git config --global --add safe.directory "$PWD"
           useradd --create-home tester
-          git archive --prefix=src/ HEAD | tar -x -C /home/tester
-          chown -R tester: /home/tester/src
-          runuser -u tester -- sh -c 'cd /home/tester/src && ./install.sh --prefix /home/tester/prefix && /home/tester/prefix/bin/hammunition-console --version'
+          ver="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' hammunition_console/__init__.py)"
+          git archive --format=tar.gz --prefix="hammunition-console-${ver}/" HEAD > /tmp/a.tar.gz
+          tar -xzf /tmp/a.tar.gz -C /home/tester
+          chown -R tester: "/home/tester/hammunition-console-${ver}"
+          runuser -u tester -- sh -c 'cd /home/tester/hammunition-console-* && ./install.sh --prefix /home/tester/prefix && /home/tester/prefix/bin/hammunition-console --version'
 
   shell:
     name: shellcheck
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

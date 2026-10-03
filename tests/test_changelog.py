@@ -40,9 +40,16 @@ def test_the_real_changelog_says_nothing_yet_until_a_release_is_cut() -> None:
     assert "## Unreleased\n\nNothing yet." in (ROOT / "CHANGELOG.md").read_text()
 
 
-def test_the_real_fragments_preview_cleanly() -> None:
+def test_the_real_tree_previews_with_or_without_fragments() -> None:
+    # after `assemble` deletes the fragments the preview must still exit 0 on the release commit
     done = subprocess.run([sys.executable, str(SCRIPT), "preview"], capture_output=True, text=True, cwd=ROOT)
-    assert done.returncode == 0 and "first release" in done.stdout
+    assert done.returncode == 0, done.stderr
+
+
+def test_a_fixture_fragment_previews_its_text(tmp_path: Path) -> None:
+    root = tree(tmp_path, "# Changelog\n\n## Unreleased\n\nNothing yet.\n")
+    done = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), "preview"], capture_output=True, text=True)
+    assert done.returncode == 0 and "Added a thing." in done.stdout, done.stderr
 
 
 def test_a_pull_request_that_changes_the_package_needs_a_fragment() -> None:
