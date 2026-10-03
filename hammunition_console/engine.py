@@ -20,7 +20,7 @@ from typing import Any
 
 from hammunition_console import guard, verbs
 
-ENGINE_FLOOR: tuple[int, int, int] = (0, 19, 0)
+ENGINE_FLOOR: tuple[int, int, int] = (0, 20, 0)
 SUPPORTED_SCHEMA = "hammunition/1"
 INSTALL_PAGE = "https://chiefgyk3d.github.io/Hammunition/getting-started/install/"
 

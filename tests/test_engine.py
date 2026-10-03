@@ -21,11 +21,11 @@ from tests.helpers import load
 
 
 def doc(**over: Any) -> str:
-    base = {"schema": "hammunition/1", "kind": "status", "engine": "0.19.0"}
+    base = {"schema": "hammunition/1", "kind": "status", "engine": "0.20.0"}
     return json.dumps({**base, **over})
 
 
-@pytest.mark.parametrize("text,expected", [("0.19.0", (0, 19, 0)), ("1.2.3+dev", (1, 2, 3)), ("v0.20.1", (0, 20, 1))])
+@pytest.mark.parametrize("text,expected", [("0.20.0", (0, 20, 0)), ("1.2.3+dev", (1, 2, 3)), ("v0.20.1", (0, 20, 1))])
 def test_parse_version(text: str, expected: tuple[int, int, int]) -> None:
     assert engine.parse_version(text) == expected
 
@@ -36,7 +36,7 @@ def test_unparsable_version_is_a_bad_document() -> None:
 
 
 def test_the_floor_is_the_measured_spike_version() -> None:
-    assert ENGINE_FLOOR == (0, 19, 0)
+    assert ENGINE_FLOOR == (0, 20, 0)
 
 
 def test_parse_a_recorded_document() -> None:
@@ -56,11 +56,17 @@ def test_an_unknown_schema_is_refused_by_name(schema: str) -> None:
         engine.parse_document(doc(schema=schema), 0)
 
 
+def test_a_0_19_0_engine_is_refused_naming_0_20_0_and_a_0_20_0_engine_is_accepted() -> None:
+    with pytest.raises(EngineTooOld, match=r"0\.19\.0.*0\.20\.0"):
+        engine.accept(engine.parse_document(doc(engine="0.19.0"), 0))
+    assert engine.accept(engine.parse_document(doc(engine="0.20.0"), 0)).engine == "0.20.0"
+
+
 def test_the_floor_names_both_versions_and_the_update_command() -> None:
     with pytest.raises(EngineTooOld) as info:
         engine.accept(engine.parse_document(doc(engine="0.18.9"), 0))
     text = str(info.value)
-    assert "0.18.9" in text and "0.19.0" in text and "git pull" in text and "bootstrap.sh" in text
+    assert "0.18.9" in text and "0.20.0" in text and "git pull" in text and "bootstrap.sh" in text
 
 
 def test_an_error_document_raises_with_the_engines_words() -> None:

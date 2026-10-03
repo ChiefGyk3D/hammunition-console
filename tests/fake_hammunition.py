@@ -23,7 +23,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 FIXTURES = Path(os.environ.get("FAKE_HAMMUNITION_FIXTURES", Path(__file__).parent / "fixtures"))
-VERSION = "0.19.0"
+VERSION = "0.20.0"
 
 
 def _read(fixtures: Path, name: str) -> tuple[str, int] | None:

@@ -134,10 +134,10 @@ def test_mouse_events_are_ignored() -> None:
 def test_the_header_is_one_line_and_never_a_station_value() -> None:
     sh = make()
     sh.open_screen("home")
-    sh.shared.engine_version, sh.shared.target, sh.shared.doctor, sh.shared.station_set = "0.19.0", "Debian 13", (0, 1, 9), True
+    sh.shared.engine_version, sh.shared.target, sh.shared.doctor, sh.shared.station_set = "0.20.0", "Debian 13", (0, 1, 9), True
     sh.refresh_header()
     first = render(sh.root, 80, 24).splitlines()[0]
-    assert first == "hammunition 0.19.0 | Debian 13 | doctor 0F 1W | station set"
+    assert first == "hammunition 0.20.0 | Debian 13 | doctor 0F 1W | station set"
     assert len(first) <= 80
 
 
@@ -151,7 +151,7 @@ def test_the_size_guard_asks_for_a_bigger_terminal_below_80x24() -> None:
 
 
 @pytest.mark.parametrize("exc,needle", [(EngineMissing("hammunition was not found on PATH"), "not found on PATH"),
-                                        (EngineTooOld("Hammunition 0.18.9 is older than 0.19.0"), "0.18.9")])
+                                        (EngineTooOld("Hammunition 0.18.9 is older than 0.20.0"), "0.18.9")])
 def test_a_fatal_engine_error_replaces_everything_with_one_screen(exc: Exception, needle: str) -> None:
     sh = make()
     sh.open_screen("home")

@@ -2,6 +2,10 @@
 
 Documents the console reads, one file per command, plus `<name>.exit` where the exit code is not 0.
 
+Recorded from engine 0.19.0 on their original dates. On 2026-10-03 the `engine` field of every JSON file here
+was edited by hand to `0.20.0`, the new floor, and nothing else was changed; a container recapture against
+engine 0.20.0 is pending. The statements below about the engine version describe the original captures.
+
 Recorded from a real engine by `scripts/capture_fixtures.py` on a throwaway HOME with the station set to
 `N0TST` / `FN31pr` (the engine's callsign check rejects `N0CALL`), scrubbed and scanned
 (`tests/fixture_scan.py`). Review every file by eye for identifiers before committing: the scan is a net.

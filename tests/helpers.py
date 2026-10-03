@@ -87,7 +87,7 @@ class FakeEngine:
         return accept(parse_document(answered[0], answered[1]))
 
 
-def document(kind: str, body: Mapping[str, Any] | None = None, *, exit_code: int = 0, engine: str = "0.19.0") -> Document:
+def document(kind: str, body: Mapping[str, Any] | None = None, *, exit_code: int = 0, engine: str = "0.20.0") -> Document:
     """A Document built in a test (for a shape no fixture has)."""
     full = {"schema": "hammunition/1", "kind": kind, "engine": engine, **(body or {})}
     return Document(kind, engine, "hammunition/1", exit_code, full)
