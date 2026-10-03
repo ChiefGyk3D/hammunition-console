@@ -62,3 +62,45 @@ def test_a_child_killed_by_a_signal_is_reported_as_128_plus_the_signal(tmp_path:
     status = tmp_path / "status"
     done = run_runner(status, sys.executable, "-c", "import os, signal; os.kill(os.getpid(), signal.SIGTERM)")
     assert done.returncode == 128 + signal.SIGTERM
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+def test_hangup_and_terminate_end_the_child_even_when_sighup_was_inherited_as_ignored(tmp_path: Path) -> None:
+    """The runner is not what a hang-up has to rely on the pty for: it forwards the signal to
+    its group, kills what ignores it, writes the status and exits. SIGHUP is ignored (as under
+    nohup) in the runner and so in the child, which also ignores SIGTERM."""
+    for sig in (signal.SIGHUP, signal.SIGTERM):
+        status = tmp_path / f"status-{sig.name}"
+        pidfile = tmp_path / f"pid-{sig.name}"
+        child = ("import os, signal, time\n"
+                 "signal.signal(signal.SIGHUP, signal.SIG_IGN)\n"
+                 "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+                 f"open({str(pidfile)!r}, 'w').write(str(os.getpid()))\n"
+                 "print('ready', flush=True)\n"
+                 "time.sleep(60)\n")
+        proc = subprocess.Popen([sys.executable, str(RUNNER), str(status), "--", sys.executable, "-c", child],
+                                stdout=subprocess.PIPE, text=True, start_new_session=True,
+                                preexec_fn=lambda: signal.signal(signal.SIGHUP, signal.SIG_IGN))
+        assert proc.stdout is not None
+        try:
+            assert proc.stdout.readline().strip() == "ready"
+            grandchild = int(pidfile.read_text())
+            proc.send_signal(sig)
+            assert proc.wait(timeout=15) == 128 + signal.SIGKILL
+            assert status.read_text().strip() == str(128 + signal.SIGKILL)
+            deadline = time.monotonic() + 5
+            while _alive(grandchild) and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert not _alive(grandchild)
+        finally:
+            if proc.poll() is None:
+                os.killpg(proc.pid, signal.SIGKILL)
+            proc.wait()
+            proc.stdout.close()

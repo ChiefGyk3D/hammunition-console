@@ -6,10 +6,13 @@ by a person. The console does not read the pane's input, echo it or inject keys.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
+import signal
 import sys
 import tempfile
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,6 +46,33 @@ def read_exit_status(path: str) -> int | None:
         return int(Path(path).read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
         return None
+
+
+def _end_group(pid: int, grace: float = 3.0) -> None:
+    """End the runner and everything it started, then reap it.
+
+    urwid's Terminal.terminate() signals only the runner and then blocks in waitpid,
+    forever when SIGHUP was inherited as ignored, and the engine behind the runner
+    depends on the pty closing to be hung up at all. The runner (a session leader,
+    so its group is its pid) forwards SIGHUP to its group; SIGKILL to the whole
+    group follows when anything is left after the grace period.
+    """
+    for sig, wait in ((signal.SIGHUP, grace), (signal.SIGKILL, 5.0)):
+        try:
+            os.killpg(pid, sig)
+        except OSError:
+            break
+        deadline = time.monotonic() + wait
+        while time.monotonic() < deadline:
+            try:
+                done, _ = os.waitpid(pid, os.WNOHANG)
+            except ChildProcessError:
+                return
+            if done:
+                with contextlib.suppress(OSError):
+                    os.killpg(pid, signal.SIGKILL)  # anything the runner's child left behind
+                return
+            time.sleep(0.02)
 
 
 class _PaneFrame(urwid.WidgetWrap):
@@ -117,6 +147,8 @@ class PaneScreen(Screen):
         """The console's own terminal closed: close the pty, as the terminal closing would."""
         # urwid 2.6 forks the child on first render; before that there is no pid to end,
         # and Terminal.terminate() raises on it.
-        if getattr(self._terminal, "pid", None) is not None:
+        pid = getattr(self._terminal, "pid", None)
+        if pid is not None and pid > 0:
+            _end_group(pid)
             self._terminal.terminate()
         shutil.rmtree(self._dir, ignore_errors=True)

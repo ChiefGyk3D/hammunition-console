@@ -4,6 +4,7 @@
 
 import os
 import shutil
+import signal
 import time
 from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
@@ -118,3 +119,35 @@ def test_hangup_kills_the_engine_process_itself_and_removes_the_temp_dir(
     else:
         raise AssertionError("the engine process survived on_hangup")
     assert not os.path.exists(pane._dir)
+
+
+def test_hangup_ends_the_engine_even_when_sighup_is_inherited_as_ignored(
+    shell: Shell, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Under nohup or some CI supervisors SIGHUP is ignored all the way down: urwid's
+    terminate() alone then waits on the runner forever and the engine is never hung up."""
+    keys = tmp_path / "keys"
+    monkeypatch.setenv("FAKE_HAMMUNITION_KEYS", str(keys))
+    previous = signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    try:
+        shell.run_pane(["hammunition", "install", "station"], "x", lambda code: None)
+        pane = shell.stack[-1]
+        assert isinstance(pane, PaneScreen)
+        pane.widget().render((100, 30), focus=False)  # the fork inherits the ignored SIGHUP
+        pidfile = Path(str(keys) + ".pid")
+        deadline = time.monotonic() + 10
+        while not pidfile.exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        fake_pid = int(pidfile.read_text())
+        pane.on_hangup()
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            try:
+                os.kill(fake_pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        else:
+            raise AssertionError("the engine process survived on_hangup")
+    finally:
+        signal.signal(signal.SIGHUP, previous)
