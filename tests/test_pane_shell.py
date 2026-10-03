@@ -25,10 +25,11 @@ def shell(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Shell]:
     monkeypatch.setenv("PATH", f"{make_shim(tmp_path)}:{os.environ['PATH']}")
     monkeypatch.setenv("FAKE_HAMMUNITION_LOG", str(tmp_path / "fake.log"))
     loop = urwid.MainLoop(urwid.SolidFill(" "))
-    environ = {"PATH": os.environ["PATH"], "TERM": "xterm", "FAKE_HAMMUNITION_LOG": str(tmp_path / "fake.log"),
-               "HAMMUNITION_ACCEPT_RF_RESEARCH": "1"}
+    wanted = ("PATH", "FAKE_HAMMUNITION_LOG", "FAKE_HAMMUNITION_KEYS")
 
     def factory(argv: Sequence[str], title: str, on_exit: Callable[[int | None], None]) -> Screen:
+        environ = {k: os.environ[k] for k in wanted if k in os.environ}
+        environ.update(TERM="xterm", HAMMUNITION_ACCEPT_RF_RESEARCH="1")
         return PaneScreen(sh, argv, title, on_exit, loop=loop, environ=environ)
 
     sh = Shell(FakeEngine(), Config(), SyncBackground(), pane_factory=factory, after=lambda s, f: None)
@@ -80,3 +81,40 @@ def test_hangup_ends_a_running_child(shell: Shell) -> None:
         time.sleep(0.05)
     else:
         raise AssertionError("the pane's child survived on_hangup")
+
+
+def test_finish_fires_on_exit_once(shell: Shell) -> None:
+    exits: list[int | None] = []
+    shell.run_pane(["hammunition", "install", "station"], "x", exits.append)
+    pane = shell.stack[-1]
+    assert isinstance(pane, PaneScreen)
+    pane.finish()
+    pane.finish()
+    assert exits == [None]
+
+
+def test_hangup_kills_the_engine_process_itself_and_removes_the_temp_dir(
+    shell: Shell, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    keys = tmp_path / "keys"
+    monkeypatch.setenv("FAKE_HAMMUNITION_KEYS", str(keys))
+    shell.run_pane(["hammunition", "install", "station"], "x", lambda code: None)
+    pane = shell.stack[-1]
+    assert isinstance(pane, PaneScreen)
+    pane.widget().render((100, 30), focus=False)  # forks the runner, which starts the fake
+    pidfile = Path(str(keys) + ".pid")
+    deadline = time.monotonic() + 10
+    while not pidfile.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    fake_pid = int(pidfile.read_text())
+    pane.on_hangup()
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        try:
+            os.kill(fake_pid, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.05)
+    else:
+        raise AssertionError("the engine process survived on_hangup")
+    assert not os.path.exists(pane._dir)

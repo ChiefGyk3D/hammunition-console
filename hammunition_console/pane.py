@@ -45,7 +45,7 @@ def read_exit_status(path: str) -> int | None:
 
 
 class _PaneFrame(urwid.WidgetWrap):
-    """All keys go to the program until it exits; then Enter continues."""
+    """All keys go to the program until it exits; then Enter continues. Nothing else leaves the pane."""
 
     def __init__(self, owner: PaneScreen, inner: urwid.Widget) -> None:
         self._owner = owner
@@ -57,7 +57,11 @@ class _PaneFrame(urwid.WidgetWrap):
                 self._owner.finish()
                 return None
             return key
-        return super().keypress(size, key)  # type: ignore[no-any-return]
+        # While the program runs every key is the program's, without exception: whatever
+        # Terminal hands back (it returns unmapped keys until its keygrab engages) is
+        # dropped here, never passed up to the shell, which would pop the pane or quit.
+        super().keypress(size, key)
+        return None
 
 
 class PaneScreen(Screen):
@@ -76,13 +80,19 @@ class PaneScreen(Screen):
         super().__init__(ctx)
         self.title = title
         self.finished = False
+        self._done = False
         self.exit_code: int | None = None
         self._on_exit = on_exit
         self._dir = tempfile.mkdtemp(prefix="hammunition-console-")
         self._status = os.path.join(self._dir, "status")
         spec = build_pane_spec(argv, self._status, os.environ if environ is None else environ)
-        self._banner = urwid.Text("Every key goes to the program until it exits; Ctrl-C reaches it, not the console.")
+        self._banner = urwid.Text("Every key goes to the program, including Ctrl-C. This screen cannot be left until it ends.")
         self._terminal = urwid.Terminal(spec.command, env=spec.env, main_loop=loop)
+        # urwid's Terminal keeps "ctrl a" as an escape key and swallows the first one, and
+        # hands mapped keys (arrows, space) back until a printable key engages its keygrab.
+        # Engage the grab from the start and make the escape key one nobody can type.
+        self._terminal.escape_sequence = "<never typed>"
+        self._terminal.keygrab = True
         urwid.connect_signal(self._terminal, "closed", self._closed)
         self._frame = _PaneFrame(self, urwid.Frame(self._terminal, footer=urwid.AttrMap(self._banner, "footer")))
 
@@ -96,6 +106,9 @@ class PaneScreen(Screen):
         self._banner.set_text(f"Finished with {said}. Press Enter to continue.")
 
     def finish(self) -> None:
+        if self._done:
+            return
+        self._done = True
         shutil.rmtree(self._dir, ignore_errors=True)
         self._on_exit(self.exit_code)
 
@@ -105,3 +118,4 @@ class PaneScreen(Screen):
         # and Terminal.terminate() raises on it.
         if getattr(self._terminal, "pid", None) is not None:
             self._terminal.terminate()
+        shutil.rmtree(self._dir, ignore_errors=True)

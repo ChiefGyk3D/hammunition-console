@@ -26,7 +26,12 @@ def main(argv: list[str]) -> int:
             handle.write(f"{code}\n")
         raise urwid.ExitMainLoop
 
-    loop = urwid.MainLoop(urwid.SolidFill(" "))
+    def unhandled(key: str) -> None:
+        # what the Shell does with a key a pane hands up: q quits, b and esc leave
+        if key in ("q", "b", "esc"):
+            raise urwid.ExitMainLoop
+
+    loop = urwid.MainLoop(urwid.SolidFill(" "), unhandled_input=unhandled)
     box.append(loop)
     pane = PaneScreen(ctx, argv, "harness", on_exit, loop=loop)
     loop.widget = pane.widget()

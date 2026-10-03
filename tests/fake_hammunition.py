@@ -91,6 +91,29 @@ def _ask(prompt: str) -> int:
     return 3
 
 
+def _record_keys(path: str) -> int:
+    """A long-running install: write the hex of every byte read from the tty to `path`
+    (and our pid to `path`.pid) until a capital X arrives. Test-only."""
+    import termios
+    import tty
+
+    Path(path + ".pid").write_text(str(os.getpid()))
+    saved = termios.tcgetattr(0)
+    tty.setraw(0)
+    try:
+        print("recording", flush=True)
+        while True:
+            byte = os.read(0, 1)
+            if not byte:
+                return 3
+            with open(path, "a", encoding="utf-8") as handle:
+                handle.write(byte.hex() + "\n")
+            if byte == b"X":
+                return 0
+    finally:
+        termios.tcsetattr(0, termios.TCSADRAIN, saved)
+
+
 def main(argv: list[str]) -> int:
     log = os.environ.get("FAKE_HAMMUNITION_LOG")
     if log:
@@ -113,6 +136,9 @@ def main(argv: list[str]) -> int:
             return 99
         sys.stdout.write(answered[0])
         return answered[1]
+    keys_file = os.environ.get("FAKE_HAMMUNITION_KEYS")
+    if keys_file and argv[:1] == ["install"] and "--dry-run" not in argv:
+        return _record_keys(keys_file)
     if argv[:1] == ["install"] and "--dry-run" not in argv:
         print(f"Installing {' '.join(argv[1:])}")
         code = _ask("Type 'yes' to continue: ")
