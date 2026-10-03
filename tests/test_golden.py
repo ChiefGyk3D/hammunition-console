@@ -31,7 +31,7 @@ def check(name: str, drawn: str) -> None:
 
 def drawn(screen: object) -> str:
     screen.on_show()  # type: ignore[attr-defined]
-    return render(screen.widget(), 100, 30)  # type: ignore[attr-defined]
+    return render(screen.widget(), 80, 24)  # type: ignore[attr-defined]
 
 
 @pytest.mark.parametrize("name,build", [

@@ -1,30 +1,24 @@
 Install by name (separate several with spaces):
-Profiles   (Tab switches; Enter plans the install; U plans an uninstall; G = asks you to type yes
-first)
-antenna            1.0       0 of 12 installed             Antenna modelling, transmission lines and
-digital-modes      1.0       0 of 22 installed             FT8, JS8, PSK31, SSTV, digital voice and
-editors            post-1.0  0 of 2 installed              VS Code and VSCodium, opt-in, each behind
-electronics        1.0       0 of 14 installed             Bench electronics, instruments and device
-listening          1.0       0 of 27 installed             Shortwave, utility and aeronautical liste
-logging            1.0       0 of 11 installed             Station logs, contest logging and award t
-morse              1.0       0 of 17 installed             Morse code — sending, decoding, learning,
-navigation         post-1.0  0 of 27 installed             Offline maps and turn-by-turn navigation
-packet             1.0       0 of 24 installed             AX.25, APRS, Winlink and the EMCOMM stack
-phone-maps         post-1.0  0 of 3 installed              Offline maps and points of interest for t
-propagation        1.0       0 of 12 installed             Band conditions, grey line, beacons and D
-reference          post-1.0  0 of 6 installed              An offline library -- Wikipedia, WikiMed,
-rf-research        post-1.0  0 of 2 installed           G  Transmit-capable and interception-capable
-rf-security        1.0       0 of 13 installed             Spectrum analysis, wireless auditing and
-rfid               post-1.0  0 of 6 installed              RFID and NFC — card protocols, readers, a
-satellite          1.0       0 of 4 installed              Tracking, working and decoding amateur an
-sdr                1.0       0 of 16 installed             Software-defined radio — receivers, GNU R
-station            1.0       0 of 14 installed             The floor every station stands on — rig c
-workstation        post-1.0  0 of 7 installed              Terminal and bench tooling for the machin
-
-
-
-
-
-
-----------------------------------------------------------------------------------------------------
+Profiles   (Tab switches; Enter plans the install; U plans an uninstall; G =
+asks you to type yes first)
+antenna            1.0       0 of 12 installed             Antenna modelling, tr
+digital-modes      1.0       0 of 22 installed             FT8, JS8, PSK31, SSTV
+editors            post-1.0  0 of 2 installed              VS Code and VSCodium,
+electronics        1.0       0 of 14 installed             Bench electronics, in
+listening          1.0       0 of 27 installed             Shortwave, utility an
+logging            1.0       0 of 11 installed             Station logs, contest
+morse              1.0       0 of 17 installed             Morse code — sending,
+navigation         post-1.0  0 of 27 installed             Offline maps and turn
+packet             1.0       0 of 24 installed             AX.25, APRS, Winlink
+phone-maps         post-1.0  0 of 3 installed              Offline maps and poin
+propagation        1.0       0 of 12 installed             Band conditions, grey
+reference          post-1.0  0 of 6 installed              An offline library --
+rf-research        post-1.0  0 of 2 installed           G  Transmit-capable and
+rf-security        1.0       0 of 13 installed             Spectrum analysis, wi
+rfid               post-1.0  0 of 6 installed              RFID and NFC — card p
+satellite          1.0       0 of 4 installed              Tracking, working and
+sdr                1.0       0 of 16 installed             Software-defined radi
+station            1.0       0 of 14 installed             The floor every stati
+workstation        post-1.0  0 of 7 installed              Terminal and bench to
+--------------------------------------------------------------------------------
 

@@ -63,4 +63,4 @@ def test_no_station_value_reaches_a_screen_a_file_or_the_environment(tmp_path: P
             assert sentinel.encode() not in data, f"{sentinel} found in {path.name}"
     assert dict(os.environ) == env_before, "the console changed the environment"
     assert not any(s in v for v in os.environ.values() for s in SENTINELS)
-    assert config.load(cfg_path).last_screen == "help"
+    assert config.load(cfg_path).last_screen == SCREENS[-1]

@@ -58,6 +58,7 @@ class FakeEngine:
     def __init__(self, suffix: str = "", station: str = "set") -> None:
         self.suffix, self.station = suffix, station
         self.calls: list[tuple[str, ...]] = []
+        self.refused: list[tuple[str, ...]] = []  # reads with no --json form: a bug in a screen, however it is handled
         self._overrides: dict[tuple[str, ...], Document | BaseException] = {}
 
     def command(self, *words: str) -> list[str]:
@@ -67,7 +68,11 @@ class FakeEngine:
         self._overrides[tuple(words)] = result
 
     def read(self, *words: str, timeout: float = 0.0) -> Document:
-        require_json_verb(words)
+        try:
+            require_json_verb(words)
+        except BaseException:
+            self.refused.append(tuple(words))
+            raise
         guard.assert_clean_read(words)
         self.calls.append(tuple(words))
         override = self._overrides.get(tuple(words))
