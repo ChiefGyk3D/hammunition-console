@@ -108,12 +108,18 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 -c "import urwid; print('urwid', urwid.__version__)"
-      - run: python3 -m pytest -v
+      - name: create the unprivileged user the tests and the install run as
+        run: useradd --create-home tester
+      - name: tests, as that user (install.sh and the console refuse to run as root)
+        run: |
+          set -eu
+          cp -a "$PWD" /home/tester/src
+          chown -R tester: /home/tester/src
+          runuser -u tester -- env HOME=/home/tester sh -c 'cd /home/tester/src && python3 -m pytest -v'
       - name: install from a git archive as an unprivileged user into a home prefix
         run: |
           set -eu
           git config --global --add safe.directory "$PWD"
-          useradd --create-home tester
           ver="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' hammunition_console/__init__.py)"
           git archive --format=tar.gz --prefix="hammunition-console-${ver}/" HEAD > /tmp/a.tar.gz
           tar -xzf /tmp/a.tar.gz -C /home/tester
