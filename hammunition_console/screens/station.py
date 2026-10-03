@@ -11,7 +11,7 @@ import urwid
 from hammunition_console.context import Context
 from hammunition_console.engine import Document
 from hammunition_console.fmt import clean, first_line, mask
-from hammunition_console.screens.base import PromptScreen, Row, Screen, text
+from hammunition_console.screens.base import ConfirmScreen, PromptScreen, Row, Screen, text
 
 
 @dataclass(frozen=True)
@@ -152,16 +152,26 @@ class StationScreen(Screen):
         self.revealed = False
         self.note = ""
         self._doc: Document | None = None
+        self._saved = False  # a run exited 0 and its read-back has not finished
 
     def on_show(self) -> None:
-        self.load("station", lambda: self.ctx.engine.read("station", "show"), lambda d: setattr(self, "_doc", d))
+        self.load("station", lambda: self.ctx.engine.read("station", "show"), self._store)
         self.redraw()
+
+    def _store(self, doc: Document) -> None:
+        self._doc = doc
+        if self._saved:
+            self._saved = False
+            self.note = "Saved. The values below were read back from the engine."
 
     def on_hide(self) -> None:
         self.revealed = False
         self.redraw()
 
     def redraw(self) -> None:
+        if self._saved and self.status.get("station") == "error":
+            self._saved = False
+            self.note = "The engine reported success, but reading the values back failed."
         rows: list[urwid.Widget] = [text("Station values are saved by the engine, never by this console. Enter changes one; v reveals or hides; c clears.", "dim")]
         if self.note:
             rows.append(text(self.note, "warn"))
@@ -185,16 +195,27 @@ class StationScreen(Screen):
         if key == "c":
             field = self.focused_value()
             if isinstance(field, Field) and field.clear_flag:
-                self._run(self.ctx.engine.command("station", "set", field.clear_flag), f"station set {field.clear_flag}")
+                self._confirm_clear(field.clear_flag)
                 return None
         return key
+
+    def _confirm_clear(self, flag: str) -> None:
+        argv = self.ctx.engine.command("station", "set", flag)
+        self.ctx.push(ConfirmScreen(
+            self.ctx, f"Clear: station set {flag}",
+            ["This runs the engine's own command, which removes a station value:", "", "  " + " ".join(argv)],
+            lambda: self._run(argv, f"station set {flag}")))
 
     def _run(self, argv: list[str], title: str) -> None:
         self.ctx.run_pane(argv, title, self._after_set)
 
     def _after_set(self, code: int | None) -> None:
-        self.note = ("Saved. The values below were read back from the engine." if code == 0 else
-                     f"The engine exited with exit {code}; its own words were in the pane.")
+        if code == 0:
+            self._saved = True
+            self.note = "Saved. Reading the values back from the engine..."
+        else:
+            said = f"exit {code}" if code is not None else "no exit code recorded"
+            self.note = f"The engine run ended with {said}; its own words were in the pane."
         self.ctx.pop()
 
     def _field(self, key: str) -> Field:

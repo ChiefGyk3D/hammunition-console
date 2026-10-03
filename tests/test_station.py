@@ -6,7 +6,7 @@ import pytest
 
 from hammunition_console.config import Config
 from hammunition_console.engine import EngineRefused
-from hammunition_console.screens.base import PromptScreen
+from hammunition_console.screens.base import ConfirmScreen, PromptScreen
 from hammunition_console.screens.station import FIELDS, ChooserScreen, StationScreen, display_value
 from tests.helpers import FakeContext, FakeEngine, document, load, render
 
@@ -109,8 +109,9 @@ def test_after_the_pane_the_screen_reads_back_and_reports_the_engines_exit_code_
     ctx.panes[0].on_exit(2)
     assert ctx.popped >= 1 and "exit 2" in screen.note and "its own words were in the pane" in screen.note
     ctx.panes[0].on_exit(0)
-    assert "Saved" in screen.note
+    assert "Saved" in screen.note and "were read back" not in screen.note, "not claimed before the read-back"
     screen.on_show()
+    assert "The values below were read back from the engine." in screen.note
     assert len([c for c in ctx.engine.calls if c == ("station", "show")]) > reads_before
 
 
@@ -119,6 +120,12 @@ def test_clearing_a_value_the_engine_can_clear() -> None:
     screen, _ = shown(ctx)
     screen._walker.set_focus(screen._walker.index(row_for(screen, "mirror")))
     assert screen.keypress("c") is None
+    assert ctx.panes == [], "c alone runs nothing"
+    confirm = ctx.pushed[-1]
+    assert isinstance(confirm, ConfirmScreen)
+    assert "hammunition station set --clear-mirror" in render(confirm.widget(), 100, 10)
+    assert confirm.keypress("b") == "b" and ctx.panes == []
+    assert confirm.keypress("R") is None
     assert ctx.panes[0].argv == ["hammunition", "station", "set", "--clear-mirror"]
 
 
@@ -210,3 +217,15 @@ def test_the_region_chooser_hides_carried_regions_until_revealed_and_the_title_h
     assert "sentinelregion" in render(chooser.widget(), 100, 30)
     chooser.on_hide()
     assert "sentinelregion" not in render(chooser.widget(), 100, 30)
+
+
+def test_a_failed_read_back_is_said_and_a_missing_exit_code_is_not_printed_as_none() -> None:
+    engine = FakeEngine()
+    ctx = FakeContext(engine=engine)
+    screen, _ = shown(ctx)
+    screen._after_set(None)
+    assert "None" not in screen.note and "no exit code recorded" in screen.note
+    engine.set(("station", "show"), EngineRefused(2, "gone"))
+    screen._after_set(0)
+    screen.on_show()
+    assert "reading the values back failed" in screen.note and "were read back" not in screen.note
