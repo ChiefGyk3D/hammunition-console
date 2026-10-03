@@ -1,0 +1,31 @@
+# CodeQL (Python and the workflows themselves), gitleaks, Semgrep, dependency review and
+# OpenSSF Scorecard, from ChiefGyk3D/git-your-ship-together (GYST, v1.6.3). No Doppler and
+# no secret: the console has no runtime dependencies and nothing here needs one.
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@0e58a0e61ea8b3800d1cb0e6ed81bb860ace2094 # v1.6.3
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      id-token: write   # Scorecard publishing
+    with:
+      codeql-queries: security-extended,security-and-quality
+      # No runtime dependencies: nothing for pip-audit to read.
+      pip-audit-requirements: ""
+      scorecard: true
+      egress-policy: block

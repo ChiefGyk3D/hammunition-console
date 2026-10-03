@@ -129,6 +129,17 @@ set to `N0TST` and `FN31pr`, scrubbed, and scanned for identifiers; review every
 opt-in: `export HAMMUNITION_ENGINE_ROOT=/path/to/your/Hammunition/checkout` before running pytest, otherwise it is skipped
 and says why.
 
+CI is the maintainer's reusable workflows in `ChiefGyk3D/git-your-ship-together` (GYST), pinned by commit: `ci.yml` calls
+`python-ci.yml` (ruff, `mypy --strict`, `scripts/spdx.py --check`, pytest on Python 3.11 with urwid 2.6.10 and on 3.13 with
+urwid 3.0.4) and `bash-ci.yml` (shellcheck over `install.sh`, `uninstall.sh` and `bin/hammunition-console`); `security.yml`
+calls `security.yml` (CodeQL, gitleaks, Semgrep, dependency review, Scorecard; no Doppler); `release.yml` calls
+`artifact-release.yml`. What stays in this repository's own `ci.yml` is what a shared workflow cannot do: the urwid 2.6.16
+leg, the two archive-install proofs (Debian 13 and Ubuntu 24.04 containers running `install.sh` as an unprivileged user
+against the archive's `python3-urwid`) and the changelog-fragment check.
+
+Required checks on `main`: `ci / CI green`, `shell / CI green`, `local jobs green`, and the jobs of the `Security` workflow
+(`security / ...`). `Release` builds and verifies on a pull request and publishes only on a `v*` tag.
+
 A check is trusted only after you have broken the thing it watches and seen it fail with a message that names the fix. Never
 edit `CHANGELOG.md` in a pull request: add `changelog.d/<pr>.<kind>.md`.
 
