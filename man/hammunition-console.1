@@ -1,0 +1,90 @@
+.\" SPDX-FileCopyrightText: Copyright (C) 2026 Renegade Penguin LLC
+.\" SPDX-License-Identifier: GPL-3.0-or-later
+.TH HAMMUNITION-CONSOLE 1 "2026-10-03" "hammunition-console 0.1.0" "Hammunition"
+.SH NAME
+hammunition\-console \- a terminal front end for the Hammunition engine
+.SH SYNOPSIS
+.B hammunition\-console
+[\fB\-\-help\fR] [\fB\-\-version\fR]
+.SH DESCRIPTION
+A full\-screen program that shows what the Hammunition engine has installed, what is wrong and what to do next, and runs the
+engine's own commands for you. It reads the engine's JSON documents and runs every change in a terminal pane, so sudo, every
+group choice and every consent prompt are the engine's, answered by you. It needs a terminal of at least 80x24, and the
+engine (\fBhammunition\fR) on PATH.
+.SH SCREENS
+Home, Install, Station, Logs, Update and Help. Hardware and maps are left to the CLI and the tray.
+.SH KEYS
+.TP
+.B 1\-5
+open the screen with that number (Home)
+.TP
+.B Enter
+open the selected row
+.TP
+.B b / Esc
+go back; changes nothing
+.TP
+.B ?
+help
+.TP
+.B q
+quit
+.TP
+.B r
+refresh this screen
+.TP
+.B R
+run the planned command in a terminal pane (plan and confirm screens)
+.TP
+.B Tab
+switch between profiles and single units (Install)
+.TP
+.B U
+plan an uninstall of the selected profile (Install)
+.TP
+.B i
+the selected profile's documentation (Install)
+.TP
+.B v
+reveal or hide station values (Station)
+.TP
+.B c
+clear the selected value, where the engine can (Station)
+.TP
+.B u
+also ask upstream whether the catalog's pins are current (Update)
+.TP
+.B A
+run the apt upgrade the report offers (Update)
+.TP
+.B B
+plan the rebuilds the report offers (Update)
+.TP
+.B s
+skip the selected first\-run step (Home)
+.TP
+.B D
+dismiss the first\-run checklist (Home)
+.SH WHAT IT NEVER DOES
+It never answers a consent prompt for you, never runs anything but the engine's own commands, never stores a station value
+and never fetches anything from the network. Every command it runs is shown first.
+.SH EXIT STATUS
+.TP
+\fB0\fR
+normal exit
+.TP
+\fB1\fR
+the console crashed (details, without any message text, in crash.log)
+.TP
+\fB2\fR
+the console refused to start: no terminal, TERM=dumb, running as root, bad argument
+.SH FILES
+.TP
+.I ~/.config/hammunition\-console/config.toml
+the last screen, the colour theme and whether the first\-run checklist was dismissed. Nothing else.
+.TP
+.I ~/.config/hammunition\-console/crash.log
+the exception type and its frames after a crash; never a message, a station value or a plan.
+.SH SEE ALSO
+.BR hammunition (1)
+and https://chiefgyk3d.github.io/Hammunition/getting\-started/console/

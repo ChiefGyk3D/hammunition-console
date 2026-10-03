@@ -142,4 +142,11 @@ class InstallScreen(Screen):
             focus = self._walker.get_focus()[0]
             self._plan("uninstall", focus)
             return None
+        if key == "i" and self.mode == "profiles":
+            value = self.focused_value()
+            if isinstance(value, tuple) and isinstance(value[1].get("name"), str):
+                from hammunition_console.screens.help import ProfileDocsScreen
+
+                self.ctx.push(ProfileDocsScreen(self.ctx, value[1]["name"]))
+                return None
         return key
