@@ -262,7 +262,10 @@ def test_the_topo_size_consent_fixture_variant_is_shown() -> None:
 def test_a_plan_is_read_once_across_re_shows_and_r_re_plans() -> None:
     ctx = FakeContext()
     screen = PlanScreen(ctx, "install", ["station"])
-    plans = lambda: [c for c in ctx.engine.calls if c[-1] == "--dry-run"]  # noqa: E731
+
+    def plans() -> list[tuple[str, ...]]:
+        return [c for c in ctx.engine.calls if c[-1] == "--dry-run"]
+
     screen.on_show()
     screen.on_show()
     assert len(plans()) == 1 and screen.doc is not None

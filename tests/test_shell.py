@@ -237,7 +237,7 @@ def test_q_on_a_too_small_terminal_does_not_end_a_running_pane() -> None:
     render(sh.root, 79, 24)
     sh.handle_key("q")  # no ExitMainLoop: the child would be killed mid-transaction
     assert sh.stack[-1] is pane and pane.name == "pane"
-    pane.finished = True
+    pane.finished = True  # type: ignore[attr-defined]
     with pytest.raises(urwid.ExitMainLoop):
         sh.handle_key("q")
 
