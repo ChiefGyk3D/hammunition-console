@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from typing import Any
 
+import pytest
+
 from hammunition_console.engine import EngineRefused
 from hammunition_console.screens.plan import (
     PlanScreen,
@@ -209,3 +211,49 @@ def test_the_result_survives_a_failing_log_read() -> None:
     result.on_show()
     out = render(result.widget(), 100, 20)
     assert "Exit code: 1" in out and "Engine log: unknown" in out and "unreadable" in out
+
+
+def _maps(**over: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {"fetch": [], "current": [], "licence": "ODbL", "download_total_human": "1 B", "disk_total_human": "2 B",
+                            "estimate_note": "n", "terrain": None}
+    return {**base, **over}
+
+
+def test_the_topo_size_consent_sentence_is_shown_with_its_typed_yes_label() -> None:
+    terrain = {"licence": "PD", "download_total_human": "3 GiB",
+               "topo": {"download_total_human": "9 GiB", "disk_total_human": "14 GiB", "size_consent": "Over 10 GB\x1b[2J: type yes"}}
+    flat = "\n".join(line for s in install_sections(view(maps=_maps(terrain=terrain))) for line in s.lines)
+    assert "asked to type yes in the pane" in flat and "Over 10 GB" in flat and "\x1b" not in flat
+    assert "terrain: download 3 GiB" in flat and "US Topo: download 9 GiB, disk 14 GiB" in flat
+
+
+@pytest.mark.parametrize("terrain", [None, {"licence": "PD", "download_total_human": "3 GiB"},
+                                     {"licence": "PD", "download_total_human": "3 GiB", "topo": None},
+                                     {"licence": "PD", "download_total_human": "3 GiB", "topo": {"size_consent": None}}])
+def test_a_missing_or_null_size_consent_renders_without_it(terrain: Any) -> None:
+    flat = "\n".join(line for s in install_sections(view(maps=_maps(terrain=terrain))) for line in s.lines)
+    assert "type yes" not in flat and "None" not in flat
+
+
+def test_an_approximate_data_total_says_so() -> None:
+    d = {"unit": "d", "total_human": "5 MiB", "licence": "x", "verified_by": "v", "artifacts": [], "installs_under": "s", "approximate": True}
+    flat = "\n".join(line for s in install_sections(view(data=[d])) for line in s.lines)
+    assert "about 5 MiB (approximate" in flat
+
+
+def test_the_longest_plan_at_80x24_shows_the_run_and_back_hint_on_the_first_screen() -> None:
+    ctx = FakeContext()
+    screen = PlanScreen(ctx, "install", ["station"])
+    screen.on_show()
+    out = render(screen.widget(), 80, 24)
+    assert "Nothing has been changed yet" in out and "R run this in a terminal pane   b back: changes nothing" in out
+    assert "Units, in install order" in out
+
+
+def test_the_topo_size_consent_fixture_variant_is_shown() -> None:
+    engine = FakeEngine()
+    plan = load("plan-station-size-consent")
+    engine.set(("install", "station", "--dry-run"), document("plan", {k: v for k, v in plan.items() if k not in ("schema", "kind", "engine")}))
+    screen = PlanScreen(FakeContext(engine=engine), "install", ["station"])
+    screen.on_show()
+    assert "asked to type yes in the pane" in render(screen.widget(), 100, 60)

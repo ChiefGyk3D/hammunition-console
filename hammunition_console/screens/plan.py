@@ -80,17 +80,27 @@ def install_sections(view: Mapping[str, Any]) -> list[Section]:
         add("LAN mirror", [_s(mirror.get("text"))])
     data_lines: list[str] = []
     for d in _dicts(view.get("data")):
-        data_lines.append(f"{_s(d.get('unit'))}: {_s(d.get('total_human'))}, licence {_s(d.get('licence'))}, {_s(d.get('verified_by'))}")
+        approx = "about " if d.get("approximate") else ""
+        data_lines.append(f"{_s(d.get('unit'))}: {approx}{_s(d.get('total_human'))}"
+                          + (" (approximate: measured when the unit was written)" if d.get("approximate") else "") + f", licence {_s(d.get('licence'))}, {_s(d.get('verified_by'))}")
         data_lines += [f"   {_s(a.get('size_human'))}  {_s(a.get('url'))}" for a in _dicts(d.get("artifacts"))]
         data_lines.append(f"   installs under {_s(d.get('installs_under'))}")
     add("Offline data downloaded (size and licence)", data_lines)
     maps = view.get("maps")
     if isinstance(maps, dict):
         fetch, current = len(_dicts(maps.get("fetch"))), len(_dicts(maps.get("current")))
-        add("Map regions (their names are in the CLI's own plan, not shown here)", [
-            f"{fetch} region(s) to download, {current} already current",
-            f"download {_s(maps.get('download_total_human'))}, disk {_s(maps.get('disk_total_human'))}",
-            f"licence {_s(maps.get('licence'))}", _s(maps.get("estimate_note"))])
+        map_lines = [f"{fetch} region(s) to download, {current} already current",
+                     f"download {_s(maps.get('download_total_human'))}, disk {_s(maps.get('disk_total_human'))}",
+                     f"licence {_s(maps.get('licence'))}", _s(maps.get("estimate_note"))]
+        terrain = maps.get("terrain")
+        if isinstance(terrain, dict):
+            map_lines.append(f"terrain: download {_s(terrain.get('download_total_human'))}, licence {_s(terrain.get('licence'))}")
+            topo = terrain.get("topo")
+            if isinstance(topo, dict):
+                map_lines.append(f"US Topo: download {_s(topo.get('download_total_human'))}, disk {_s(topo.get('disk_total_human'))}")
+                if topo.get("size_consent"):
+                    map_lines.append(f"You will be asked to type yes in the pane for this size: {_s(topo['size_consent'])}")
+        add("Map regions (their names are in the CLI's own plan, not shown here)", map_lines)
     add("Group memberships", [
         f"{_s(m.get('user'))} is added to group {_s(m.get('group'))} (for {_s(m.get('package'))}): {_s(m.get('detail'))}"
         + (f"  undo: {_s(m['reverse_hint'])}" if m.get("reverse_hint") else "") for m in _dicts(view.get("memberships"))])
