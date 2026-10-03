@@ -35,7 +35,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from tests.fixture_scan import findings, host_pattern  # noqa: E402
+from tests.fixture_scan import findings, host_pattern, live_identity_findings  # noqa: E402
 
 STATION = ["--callsign=N0TST", "--grid-square=FN31pr", "--node-alias=TEST"]
 REFUSED = "no-such-unit-xyz"
@@ -122,7 +122,7 @@ def main(argv: list[str]) -> int:
             nonlocal gated
             code, stdout = run(engine, words, env)
             text = scrub(stdout, home)
-            bad = findings(text)
+            bad = [*findings(text), *live_identity_findings(text)]
             if bad:
                 problems.append(f"{name}: {bad}")
                 return

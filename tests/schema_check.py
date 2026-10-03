@@ -12,6 +12,12 @@ from typing import Any
 
 ENVELOPE = frozenset({"schema", "kind", "engine"})
 
+# Keywords the walker applies, and annotations that assert nothing. Anything else
+# (enum, const, oneOf, allOf, pattern, minimum, ...) is refused rather than
+# silently ignored, because an ignored constraint is a check that passes wrongly.
+_APPLIED = frozenset({"$ref", "anyOf", "type", "items", "properties", "required", "additionalProperties"})
+_ANNOTATIONS = frozenset({"$defs", "$schema", "$id", "title", "description", "default", "examples"})
+
 _TYPES: dict[str, Any] = {
     "string": str, "integer": int, "number": (int, float), "boolean": bool,
     "array": list, "object": dict, "null": type(None),
@@ -29,6 +35,13 @@ def validate(instance: Any, schema: Mapping[str, Any]) -> list[str]:
     out: list[str] = []
 
     def walk(value: Any, sub: Mapping[str, Any], path: str) -> list[str]:
+        for keyword in sub:
+            if keyword not in _APPLIED and keyword not in _ANNOTATIONS:
+                raise NotImplementedError(f"{path}: schema keyword {keyword!r} is not supported by schema_check")
+        if "additionalProperties" in sub and not isinstance(sub["additionalProperties"], bool):
+            raise NotImplementedError(f"{path}: a non-boolean 'additionalProperties' is not supported by schema_check")
+        if "type" in sub and (not isinstance(sub["type"], str) or sub["type"] not in _TYPES):
+            raise NotImplementedError(f"{path}: 'type' {sub['type']!r} is not supported by schema_check (one type name only)")
         if "$ref" in sub:
             ref = str(sub["$ref"])
             assert ref.startswith("#/$defs/"), f"unsupported $ref {ref}"

@@ -34,19 +34,32 @@ HOME = re.compile(r"/home/([A-Za-z0-9._-]+)")
 BY_ID = re.compile(r"/dev/serial/by-id/(\S+)")
 
 
-# A host name that is also a common word or a product name is counted only in
-# machine contexts (`user@host`, `host.local`, `hostname: host`): as a bare word it
-# cannot be told from the product (`hammunition install`, `hammunition/1`).
-PRODUCT_NAMES = {"hammunition"}
-
-
 def host_pattern(host: str) -> re.Pattern[str]:
-    """The host name as a host, not as a word the project also uses."""
+    """The host name where it is a host: a host name that is also a common word or a
+    product name must not match as a bare word (`hammunition install`, `runner`)."""
     name = re.escape(host)
-    if host.lower() in PRODUCT_NAMES:
-        return re.compile(
-            rf"@{name}\b|\b{name}\.(?:local|lan|home|localdomain)\b|\bhostname\W{{1,3}}{name}\b", re.I)
-    return re.compile(r"(?<![\w/.-])" + name + r"(?![\w/-])", re.I)
+    return re.compile(
+        rf"@{name}\b|\b{name}\.(?:local|lan|home|localdomain)\b|\bhostname\W{{1,3}}{name}\b", re.I)
+
+
+def user_pattern(user: str) -> re.Pattern[str]:
+    """The account name where it is an account: a home path, `user@`, `owner: user`."""
+    name = re.escape(user)
+    return re.compile(rf"/home/{name}\b|\b{name}@|\bowner\W{{1,3}}{name}\b", re.I)
+
+
+def live_identity_findings(text: str) -> list[str]:
+    """The live username and hostname as a bare substring. This is a recording-time
+    check (scripts/capture_fixtures.py), not a test: what counts as a bare substring
+    depends on the machine running it, and a test must not."""
+    out: list[str] = []
+    user = getpass.getuser()
+    if len(user) >= 3 and user.lower() in text.lower():
+        out.append("the recording account's name appears")
+    host = socket.gethostname().split(".")[0]
+    if len(host) >= 3 and host.lower() in text.lower():
+        out.append("the recording host's name appears")
+    return out
 
 
 def findings(text: str) -> list[str]:
@@ -66,9 +79,9 @@ def findings(text: str) -> list[str]:
         if "FIXTURE" not in m.group(1):
             out.append(f"serial-bearing device path {m.group(0)!r} (use usb-FIXTURE-if00)")
     user = getpass.getuser()
-    if len(user) >= 3 and user.lower() in text.lower():
-        out.append("this machine's username")
+    if len(user) >= 3 and user_pattern(user).search(text):
+        out.append("the account name, as a home path, user@ or owner")
     host = socket.gethostname().split(".")[0]
     if len(host) >= 3 and host_pattern(host).search(text):
-        out.append("this machine's hostname")
+        out.append("the host name, as @host, host.local or hostname")
     return out

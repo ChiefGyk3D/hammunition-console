@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from typing import Any
 
+import pytest
+
 from tests.schema_check import ENVELOPE, validate
 
 SCHEMA: dict[str, Any] = {
@@ -33,3 +35,17 @@ def test_wrong_type_is_rejected_and_bool_is_not_an_integer() -> None:
 
 def test_the_envelope_names() -> None:
     assert ENVELOPE == {"schema", "kind", "engine"}
+
+
+@pytest.mark.parametrize("sub", [
+    {"enum": ["a"]}, {"const": 1}, {"oneOf": [{"type": "string"}]}, {"pattern": "x"},
+    {"type": ["string", "null"]}, {"type": "float"},
+    {"type": "object", "additionalProperties": {"type": "string"}},
+])
+def test_an_unsupported_keyword_or_shape_fails_loudly(sub: dict[str, Any]) -> None:
+    with pytest.raises(NotImplementedError, match=r"\$"):
+        validate({"a": "x"}, sub)
+
+
+def test_annotations_are_ignored() -> None:
+    assert validate("x", {"title": "T", "description": "d", "type": "string"}) == []
