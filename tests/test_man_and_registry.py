@@ -28,3 +28,9 @@ def test_the_man_page_names_what_it_never_does() -> None:
 def test_every_registered_screen_resolves_and_builds(name: str) -> None:
     screen = build_registry()[name](FakeContext())
     assert screen.name == name
+
+
+def test_every_registered_screen_has_help_text() -> None:
+    from hammunition_console.helptext import SCREEN_HELP
+
+    assert set(SCREEN_CLASSES) <= set(SCREEN_HELP), "a registered screen has no help text"

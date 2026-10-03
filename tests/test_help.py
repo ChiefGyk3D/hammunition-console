@@ -108,3 +108,11 @@ def test_engine_text_is_cleaned() -> None:
     screen = ProfileDocsScreen(FakeContext(engine=engine), "x")
     screen.on_show()
     assert "\x1b" not in render(screen.widget(), 100, 10)
+
+
+def test_help_fits_an_80x24_terminal() -> None:
+    ctx = FakeContext()
+    screen = HelpScreen(ctx, about="install")
+    screen.on_show()
+    out = render(screen.widget(), 80, 24)
+    assert "This screen (install)" in out and SCREEN_HELP["install"][0] in out and "Keys" in out
