@@ -227,3 +227,25 @@ def test_a_startup_crash_writes_the_crash_log_and_exits_one(tmp_path: Path, caps
     log = (tmp_path / "hammunition-console" / "crash.log").read_text()
     assert "RuntimeError" in log and "ZZ9SENTINEL" not in log
     assert "ZZ9SENTINEL" not in capsys.readouterr().err
+
+
+def test_q_on_a_too_small_terminal_does_not_end_a_running_pane() -> None:
+    sh = make()
+    sh.open_screen("home")
+    sh.run_pane(["hammunition", "install", "station"], "install station", lambda code: None)
+    pane: Any = sh.stack[-1]
+    render(sh.root, 79, 24)
+    sh.handle_key("q")  # no ExitMainLoop: the child would be killed mid-transaction
+    assert sh.stack[-1] is pane and pane.name == "pane"
+    pane.finished = True
+    with pytest.raises(urwid.ExitMainLoop):
+        sh.handle_key("q")
+
+
+def test_q_with_an_unfinished_pane_under_another_screen_is_ignored_when_too_small() -> None:
+    sh = make()
+    sh.open_screen("home")
+    sh.run_pane(["hammunition", "install", "station"], "install station", lambda code: None)
+    sh.open_screen("help")
+    render(sh.root, 60, 20)
+    sh.handle_key("q")

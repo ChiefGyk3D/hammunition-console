@@ -164,20 +164,27 @@ class Shell:
             return
         if isinstance(self.root, SizeGuard) and self.root.too_small:
             # Only the message is on screen: no hidden screen may act on a key.
-            if key == "q":
+            if key == "q" and not self._pane_running():
                 raise urwid.ExitMainLoop
             return
         top = self.stack[-1]
         if top.keypress(key) is None:
             return
         if key == "q":
-            raise urwid.ExitMainLoop
+            if not self._pane_running():
+                raise urwid.ExitMainLoop
+            return
         if key in ("b", "esc"):
             self.pop()
         elif key == "?":
             self.open_screen("help", about=top.name)
         elif key == "r":
             top.on_show()
+
+    def _pane_running(self) -> bool:
+        """True while an unfinished pane is anywhere on the stack: quitting would make
+        urwid's exit kill the engine mid-transaction. Only SIGHUP ends a run."""
+        return any(s.name == "pane" and not getattr(s, "finished", False) for s in self.stack)
 
     def hangup(self) -> NoReturn:
         for screen in self.stack:
