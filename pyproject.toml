@@ -32,11 +32,6 @@ disallow_subclassing_any = false
 module = ["urwid", "urwid.*"]
 ignore_missing_imports = true
 
-# hammunition_console.app arrives in a later task; __main__ imports it late.
-[[tool.mypy.overrides]]
-module = ["hammunition_console.app"]
-ignore_missing_imports = true
-
 # Tests poke at private widget state and urwid internals, whose types differ
 # between urwid 2.6 and 3.x; an ignore that is needed on one is unused on the
 # other, so unused-ignore warnings are off for tests only. The package itself

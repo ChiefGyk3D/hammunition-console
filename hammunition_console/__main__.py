@@ -50,7 +50,7 @@ def main(
         return 2
     from hammunition_console.app import run  # imported late: the refusals above need no urwid
 
-    return int(run(env))
+    return run(env)
 
 
 if __name__ == "__main__":
