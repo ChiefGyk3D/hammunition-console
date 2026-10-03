@@ -19,7 +19,7 @@ it never answers a consent prompt for you. Needs a terminal at least 80x24."""
 KEYS: tuple[tuple[str, str], ...] = (
     ("1-5", "open the screen with that number (Home)"),
     ("Enter", "open the selected row"),
-    ("b / Esc", "go back; changes nothing"),
+    ("b / Esc", "go back; changes nothing (in a text prompt only Esc: b is typed)"),
     ("?", "help"),
     ("q", "quit"),
     ("r", "refresh this screen"),
@@ -92,5 +92,5 @@ NEVER: tuple[str, ...] = (
     "It never answers a consent prompt for you: you type yes into the engine's own prompt, in the pane.",
     "It never runs anything but the engine's own commands (and the apt upgrade the engine's update report offers).",
     "It never stores your callsign, grid square or any station value; the engine's station file is the only copy.",
-    "It never fetches anything from the network; the engine does that, and says so in its plan.",
+    "It never fetches anything from the network itself; the engine does, and it asks GitHub, git hosts and PyPI only when you press u on Update.",
 )

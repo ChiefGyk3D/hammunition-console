@@ -57,3 +57,29 @@ def test_the_contract_lists_every_verb_the_console_reads_and_both_engine_prerequ
 
 def test_the_readme_says_how_the_three_channels_differ() -> None:
     assert "worker thread" in README and "terminal pane" in README and "config.toml" in README
+
+
+MAN = (ROOT / "man" / "hammunition-console.1").read_text()
+
+
+def test_nothing_claims_the_console_never_fetches_without_naming_the_u_key() -> None:
+    for name, text in (("README", README), ("man page", MAN)):
+        flat = " ".join(text.split())
+        assert "never fetches anything from the network;" not in flat, name
+        assert "only when you press u" in flat and "PyPI" in flat, name
+
+
+def test_the_prompt_says_only_esc_cancels_and_the_docs_agree() -> None:
+    from hammunition_console.screens.base import PromptScreen
+    from tests.helpers import FakeContext
+
+    prompt = PromptScreen(FakeContext(), "t", "l: ", lambda v: None)
+    shown = " ".join(str(w.original_widget.text) for w in prompt._walker if hasattr(w, "original_widget"))
+    assert "Esc cancels" in shown and "Esc or b" not in shown
+    assert "only Esc" in README
+
+
+def test_unmeasured_claims_stay_unmeasured_and_fixtures_use_the_placeholder() -> None:
+    assert "works over SSH and on a Pi" not in README and "has not been measured" in README
+    assert "N0CALL" not in README and "N0TST" in README
+    assert "hardware apply" in README and "first\\-run step" in MAN

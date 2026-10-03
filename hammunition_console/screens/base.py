@@ -117,7 +117,7 @@ class PromptScreen(Screen):
         self.title = title
         self._on_submit = on_submit
         self._edit = urwid.Edit(label)
-        rows: list[urwid.Widget] = [text(note), self._edit, text("Enter accepts; Esc or b cancels. Nothing is saved by the console itself.")]
+        rows: list[urwid.Widget] = [text(note), self._edit, text("Enter accepts; Esc cancels (b is typed into the box). Nothing is saved by the console itself.")]
         self._walker[:] = rows
         self._walker.set_focus(1)
 

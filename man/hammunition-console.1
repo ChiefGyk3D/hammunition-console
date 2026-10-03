@@ -12,7 +12,7 @@ engine's own commands for you. It reads the engine's JSON documents and runs eve
 group choice and every consent prompt are the engine's, answered by you. It needs a terminal of at least 80x24, and the
 engine (\fBhammunition\fR) on PATH.
 .SH SCREENS
-Home, Install, Station, Logs, Update and Help. Hardware and maps are left to the CLI and the tray.
+Home, Install, Station, Logs, Update and Help. Hardware setup is one first\-run step on Home; everything else about hardware, and maps, is left to the CLI and the tray.
 .SH KEYS
 .TP
 .B 1\-5
@@ -22,7 +22,7 @@ open the screen with that number (Home)
 open the selected row
 .TP
 .B b / Esc
-go back; changes nothing
+go back; changes nothing (in a text prompt only Esc: b is typed)
 .TP
 .B ?
 help
@@ -67,7 +67,8 @@ skip the selected first\-run step (Home)
 dismiss the first\-run checklist (Home)
 .SH WHAT IT NEVER DOES
 It never answers a consent prompt for you, never runs anything but the engine's own commands, never stores a station value
-and never fetches anything from the network. Every command it runs is shown first.
+and never fetches anything from the network itself: the engine does, and it asks GitHub, git hosts and PyPI only when you
+press u on Update. Every command it runs is shown first.
 .SH EXIT STATUS
 .TP
 \fB0\fR

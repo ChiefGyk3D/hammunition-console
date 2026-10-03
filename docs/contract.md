@@ -13,8 +13,8 @@ treated as present; each screen that reads them shows "unknown" when they are no
 |---|---|---|---|
 | Home | `hammunition status` | `target`, `engine` | the header says `?` |
 | Home | `hammunition doctor` | `fails`, `warns`, `healthy`, `checks[].name/status/detail/fix` | the counts say `?`; `fix` is shown, never run |
-| Home | `hammunition station show` | `callsign`, `grid_square` (only whether each is set) | "station: ?" |
-| Home | `hammunition logs` | `runs[0]` | "no runs yet" |
+| Home | `hammunition station show` | `callsign`, `grid_square` (only whether each is set) | "Station: unknown - (the engine's words)" on the screen; the header says `station ?` |
+| Home | `hammunition logs` | `runs[0]` | "Last run: no runs yet" for an empty list, "Last run: unknown" when `runs` is not a list |
 | Home | `hammunition update` | `counts.behind_pin`, rows in state `retired` | without E2 the engine refuses with exit 2: "unknown (the engine's words)" |
 | Home | `hammunition list` | the starter profile's `members`, `installed` (E1) | the checklist's install steps show `[?]` |
 | Install | `hammunition list` | profiles: `name`, `stage`, `summary`, `consent_gated`, `packages`, `documentation`, E1 fields; units: `name`, `status`, `summary`, `resolves_here` | without E1: "N units, state unknown" |

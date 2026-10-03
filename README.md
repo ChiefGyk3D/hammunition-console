@@ -2,14 +2,15 @@
 
 A full-screen terminal front end for the [Hammunition](https://github.com/ChiefGyk3D/Hammunition) engine. It shows what is
 installed, what is wrong and what to do next, and runs the engine's own commands for you, so a licensed operator can get from
-a fresh machine to a working station without remembering the CLI's verbs. It runs in a terminal, so it works over SSH and on a Pi.
+a fresh machine to a working station without remembering the CLI's verbs. It runs in a terminal; whether it works well over SSH or on a Raspberry Pi has not been measured.
 
 It is a client of the engine, not part of it: it has no install logic, no package names and no catalog parser. It asks the engine.
 
 ## What it is
 
 Six screens: Home, Install, Station, Logs, Update and Help. Every action is a command you could type yourself, and the console
-shows it before it runs. Hardware and maps are left to the CLI and to
+shows it before it runs. Hardware setup is one first-run step on Home (`hammunition hardware apply`, in a pane, with the
+engine's own prompts); everything else about hardware, and maps, is left to the CLI and to
 [hammunition-tray](https://github.com/ChiefGyk3D/hammunition-tray) for now.
 
 ## Requirements
@@ -60,7 +61,7 @@ and nothing runs until you press `R` on it.
 - It never answers a consent prompt for you: you type yes into the engine's own prompt, in the pane.
 - It never runs anything but the engine's own commands (and the apt upgrade the engine's update report offers).
 - It never stores your callsign, grid square or any station value; the engine's station file is the only copy.
-- It never fetches anything from the network; the engine does that, and says so in its plan.
+- It never fetches anything from the network itself; the engine does, and it asks GitHub, git hosts and PyPI only when you press u on Update.
 
 Also: it never passes the engine's assume-yes flag, never sets a scripted-consent environment variable and removes any you
 exported from the environment of everything it starts, never runs a `doctor` fix (it shows the engine's fix text and leaves the
@@ -73,7 +74,7 @@ values until you ask.
 |---|---|
 | `1-5` | open the screen with that number (Home) |
 | `Enter` | open the selected row |
-| `b / Esc` | go back; changes nothing |
+| `b / Esc` | go back; changes nothing (in a text prompt only Esc: b is typed) |
 | `?` | help |
 | `q` | quit |
 | `r` | refresh this screen |
@@ -122,7 +123,7 @@ python3 -m pytest          # also: ruff check . ; mypy ; python3 scripts/spdx.py
 
 `--system-site-packages` lets the venv use the distribution's `python3-urwid`; to test another urwid, `pip install "urwid==X"`
 into the venv. Fixtures are recorded by `scripts/capture_fixtures.py` from a real engine on a throwaway home with the station
-set to `N0CALL` and `FN31pr`, scrubbed, and scanned for identifiers; review every new fixture by eye before committing.
+set to `N0TST` and `FN31pr`, scrubbed, and scanned for identifiers; review every new fixture by eye before committing.
 
 `tests/test_verbs.py` checks the console's verb list against the engine's `docs/reference/json-interface.md`. That check is
 opt-in: `export HAMMUNITION_ENGINE_ROOT=/path/to/your/Hammunition/checkout` before running pytest, otherwise it is skipped
