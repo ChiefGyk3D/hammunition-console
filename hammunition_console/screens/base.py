@@ -85,7 +85,7 @@ class Screen:
             self._walker.set_focus(min(position or 0, len(rows) - 1))
 
     def focused_value(self) -> object:
-        widget = self._walker.focus if len(self._walker) else None
+        widget = self._walker.get_focus()[0] if len(self._walker) else None
         return getattr(widget, "value", None)
 
     def load(self, key: str, call: Callable[[], T], done: Callable[[T], None]) -> None:
