@@ -1,0 +1,88 @@
+# Cut a release when a v* tag is pushed. verify refuses a tag that disagrees with the
+# tree; test runs the suite; publish creates the GitHub release with the changelog
+# section, the sha256 of GitHub's source archive for the tag (fetched twice and
+# compared, printed in the job log) and a SHA256SUMS file attached. That digest is
+# the one the Hammunition catalog unit pins. Actions are pinned by commit, resolved
+# with `git ls-remote --tags` on 2026-10-03. The tag reaches shell only through env,
+# never through an expression inside run.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: the tag agrees with the tree
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the tag, the version, the man page and the changelog agree
+        env:
+          TAG: ${{ github.ref_name }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          case "$REF" in
+            refs/tags/v*) python3 scripts/check_version.py "$TAG" ;;
+            *) python3 scripts/check_version.py "v$(python3 -c 'from hammunition_console import __version__ as v; print(v)')" ;;
+          esac
+
+  test:
+    name: tests
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest "urwid==3.0.4"
+      - run: python -m pytest -v
+
+  publish:
+    name: publish
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          awk -v v="${TAG}" 'index($0, "## " v) == 1 {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
+          test -s notes.md
+          url="https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz"
+          curl -fsSL "$url" -o a.tgz
+          curl -fsSL "$url" -o b.tgz
+          cmp a.tgz b.tgz
+          sum="$(sha256sum a.tgz | cut -d' ' -f1)"
+          echo "source archive: ${url}"
+          echo "sha256: ${sum}"
+          printf '%s  %s\n' "$sum" "hammunition-console-${TAG}.tar.gz" > SHA256SUMS
+          {
+            echo
+            echo "Source archive: ${url}"
+            echo "sha256: ${sum}"
+            echo "bytes: $(stat -c %s a.tgz)"
+          } >> notes.md
+          gh release create "$TAG" SHA256SUMS --repo "$REPO" --title "hammunition-console $TAG" --notes-file notes.md
