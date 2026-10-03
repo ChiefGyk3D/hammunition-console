@@ -10,7 +10,9 @@ import urwid
 from hammunition_console.context import Context, header_target
 from hammunition_console.engine import Document
 from hammunition_console.fmt import first_line
-from hammunition_console.screens.base import Row, Screen, text
+from hammunition_console.screens.base import ConfirmScreen, Row, Screen, text
+from hammunition_console.screens.plan import PlanScreen
+from hammunition_console.walkthrough import MARK, STARTER, Step, show_checklist, steps
 
 READS: dict[str, tuple[str, ...]] = {
     "status": ("status",),
@@ -109,6 +111,8 @@ class HomeScreen(Screen):
     def __init__(self, ctx: Context) -> None:
         super().__init__(ctx)
         self.docs: dict[str, Document] = {}
+        self.skipped: set[str] = set()
+        self.note = ""
 
     def on_show(self) -> None:
         for key, words in READS.items():
@@ -135,7 +139,49 @@ class HomeScreen(Screen):
         self.ctx.refresh_header()
 
     def _walkthrough_rows(self) -> list[urwid.Widget]:
-        return []  # filled in by Task 15 (the first-run checklist)
+        if self.ctx.config.walkthrough_dismissed:
+            return []
+        if "station" not in self.docs and "station" not in self.errors:
+            return []  # still reading: do not flash a checklist that may be all done
+        station = self.docs["station"].body if "station" in self.docs else None
+        catalog = self.docs["list"].body if "list" in self.docs else None
+        items = steps(station, catalog, self.skipped)
+        if not show_checklist(items):
+            return []
+        rows: list[urwid.Widget] = [text("First run: four steps, each optional. Enter opens one, s skips it, D dismisses this list.", "key")]
+        if self.note:
+            rows.append(text(self.note, "warn"))
+        for step in items:
+            row = Row(f" {MARK[step.state]} {step.number}  {step.label}  - {step.detail}", step)
+            urwid.connect_signal(row, "activate", self._open_step)
+            rows.append(row)
+        rows.append(text(""))
+        return rows
+
+    def _open_step(self, row: Row) -> None:
+        step = row.value
+        if not isinstance(step, Step):
+            return
+        if step.key == "station":
+            self.ctx.open_screen("station")
+        elif step.key == "hardware":
+            self.ctx.push(ConfirmScreen(
+                self.ctx, "Apply the hardware rules",
+                ["This runs: hammunition hardware apply", "",
+                 "It prints its own plan and asks for its own typed confirmation (and your sudo password).",
+                 "The console cannot show that plan first: the engine has no JSON form of it yet."],
+                self._run_hardware))
+        elif step.key == "pick":
+            self.ctx.open_screen("install", highlight=STARTER)
+        elif step.key == "install":
+            self.ctx.push(PlanScreen(self.ctx, "install", [STARTER]))
+
+    def _run_hardware(self) -> None:
+        self.ctx.run_pane(self.ctx.engine.command("hardware", "apply"), "hardware apply", self._after_hardware)
+
+    def _after_hardware(self, code: int | None) -> None:
+        self.note = "" if code == 0 else f"hardware apply exited {code}; its own words were in the pane. The step stays on the list."
+        self.ctx.pop()
 
     def redraw(self) -> None:
         doc, err = self.docs.get, self.errors.get
@@ -165,4 +211,15 @@ class HomeScreen(Screen):
         if key in ("1", "2", "3", "4", "5"):
             self.ctx.open_screen(MENU[int(key) - 1][0])
             return None
+        if key == "D":
+            self.ctx.config.walkthrough_dismissed = True
+            self.ctx.save_config()
+            self.redraw()
+            return None
+        if key == "s":
+            step = self.focused_value()
+            if isinstance(step, Step):
+                self.skipped.add(step.key)
+                self.redraw()
+                return None
         return key
