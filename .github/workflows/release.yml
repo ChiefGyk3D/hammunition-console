@@ -1,94 +1,57 @@
-# Cut a release when a v* tag is pushed. verify refuses a tag that disagrees with the
-# tree; test runs the suite; publish creates the GitHub release with the changelog
-# section, GitHub's source archive for the tag (fetched twice and compared) attached
-# as hammunition-console-<version>.tar.gz with its sha256 printed in the job log and a
-# SHA256SUMS over the attached files. That digest is
-# the one the Hammunition catalog unit pins. Actions are pinned by commit, resolved
-# with `git ls-remote --tags` on 2026-10-03. The tag reaches shell only through env,
-# never through an expression inside run.
-name: release
+# Cut a release when a v* tag is pushed, through artifact-release.yml in
+# ChiefGyk3D/git-your-ship-together (GYST, v1.6.3). The build produces
+# hammunition-console-<version>.tar.gz from `git archive` with the prefix
+# hammunition-console-<version>/ (the layout of GitHub's own tag archive, which the
+# Hammunition catalog unit pins); GYST adds SHA256SUMS, a cosign bundle and SLSA
+# provenance per file and attaches them to the release. The verify step refuses a tag that
+# disagrees with the tree, then unpacks the archive and runs install.sh into a temporary
+# prefix and the wrapper's --version. A pull request builds and verifies and never
+# publishes. The version reaches shell only as $VERSION, set by the workflow.
+name: Release
 
 on:
   push:
     tags: ["v*"]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  verify:
-    name: the tag agrees with the tree
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: the tag, the version, the man page and the changelog agree
-        env:
-          TAG: ${{ github.ref_name }}
-          REF: ${{ github.ref }}
-        run: |
-          set -euo pipefail
-          case "$REF" in
-            refs/tags/v*) python3 scripts/check_version.py "$TAG" ;;
-            *) python3 scripts/check_version.py "v$(python3 -c 'from hammunition_console import __version__ as v; print(v)')" ;;
-          esac
-
-  test:
-    name: tests
-    needs: verify
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.13"
-      - run: python -m pip install pytest "urwid==3.0.4"
-      - run: python -m pytest -v
-
-  publish:
-    name: publish
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
+  artifacts:
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/artifact-release.yml@0e58a0e61ea8b3800d1cb0e6ed81bb860ace2094 # v1.6.3
     permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          awk -v v="${TAG}" 'index($0, "## " v " ") == 1 {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
-          test -s notes.md
-          ver="${TAG#v}"
-          name="hammunition-console-${ver}.tar.gz"
-          url="https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz"
-          mkdir assets
-          curl -fsSL "$url" -o "assets/${name}"
-          curl -fsSL "$url" -o second.tgz
-          cmp "assets/${name}" second.tgz
-          sum="$(sha256sum "assets/${name}" | cut -d' ' -f1)"
-          echo "source archive: ${url}"
-          echo "asset: ${name}"
-          echo "sha256: ${sum}"
-          (cd assets && sha256sum ./* > SHA256SUMS)
-          {
-            echo
-            echo "Source archive: ${url}"
-            echo "sha256: ${sum}"
-            echo "asset: ${name}"
-            echo "bytes: $(stat -c %s "assets/${name}")"
-          } >> notes.md
-          gh release create "$TAG" "assets/${name}" assets/SHA256SUMS --repo "$REPO" --title "hammunition-console $TAG" --notes-file notes.md
+      contents: write       # the GitHub release and its assets
+      id-token: write       # keyless signing and build provenance
+      attestations: write   # the provenance record
+    with:
+      publish: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      tag-prefix: v
+      build-command: |
+        mkdir -p dist
+        git archive --format=tar.gz --prefix="hammunition-console-${VERSION}/" \
+          -o "dist/hammunition-console-${VERSION}.tar.gz" HEAD
+      artifacts: dist/hammunition-console-*.tar.gz
+      verify-command: |
+        case "$VERSION" in
+          0.0.0+*) echo "not a tag: the tag/tree check is skipped" ;;
+          *) python3 scripts/check_version.py "v$VERSION" ;;
+        esac
+        work="$(mktemp -d)"
+        python3 -m venv "$work/venv"
+        "$work/venv/bin/pip" install --quiet "urwid==3.0.4"
+        tar -xzf "dist/hammunition-console-${VERSION}.tar.gz" -C "$work"
+        cd "$work/hammunition-console-${VERSION}"
+        ./install.sh --prefix "$work/prefix" --interpreter "$work/venv/bin/python"
+        "$work/prefix/bin/hammunition-console" --version
+      release-notes-command: |
+        case "$VERSION" in
+          0.0.0+*) exit 0 ;;
+        esac
+        notes="$(awk -v v="v${VERSION}" 'index($0, "## " v " ") == 1 {f=1; next} /^## / {f=0} f' CHANGELOG.md)"
+        test -n "$notes"
+        printf '%s\n' "$notes"
+      egress-policy: block
+      extra-allowed-endpoints: pypi.org:443 files.pythonhosted.org:443

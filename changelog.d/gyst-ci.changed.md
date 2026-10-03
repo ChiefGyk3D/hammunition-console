@@ -1,0 +1,1 @@
+- CI and release now call the reusable workflows in `ChiefGyk3D/git-your-ship-together` v1.6.3 (`python-ci`, `bash-ci`, `security`, `artifact-release`), pinned by commit; the archive-install proofs, the urwid 2.6.16 leg and the changelog-fragment check stay local, and the release adds signatures and build provenance beside `SHA256SUMS`.

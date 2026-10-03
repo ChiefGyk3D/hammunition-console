@@ -8,11 +8,11 @@ import pytest
 WORKFLOWS = sorted((Path(__file__).resolve().parent.parent / ".github" / "workflows").glob("*.yml"))
 USES = re.compile(r"^\s*-?\s*uses:\s*(\S+)@(\S+)(?:\s+#\s*(v\S+))?\s*$")
 ENV_ASSIGN = re.compile(r"^\s+[A-Z][A-Z_]*:\s+\$\{\{[^}]+\}\}\s*$")
-SAFE_KEYS = re.compile(r"^\s*(if|group|name|runs-on|python-version|cancel-in-progress):")
+SAFE_KEYS = re.compile(r"^\s*(if|group|name|runs-on|python-version|cancel-in-progress|publish):")
 
 
 def test_there_are_workflows() -> None:
-    assert {w.name for w in WORKFLOWS} == {"ci.yml", "release.yml"}
+    assert {w.name for w in WORKFLOWS} == {"ci.yml", "release.yml", "security.yml"}
 
 
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda p: p.name)
@@ -39,3 +39,26 @@ def test_a_tag_or_ref_never_reaches_shell_except_through_env(path: Path) -> None
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda p: p.name)
 def test_permissions_default_to_read_only(path: Path) -> None:
     assert re.search(r"^permissions:\n  contents: read$", path.read_text(), re.M)
+
+
+GYST = "ChiefGyk3D/git-your-ship-together/.github/workflows/"
+README = (Path(__file__).resolve().parent.parent / "README.md").read_text()
+
+
+@pytest.mark.parametrize(
+    ("name", "reusable"),
+    [("ci.yml", ("python-ci.yml", "bash-ci.yml")), ("security.yml", ("security.yml",)),
+     ("release.yml", ("artifact-release.yml",))],
+)
+def test_ci_security_and_release_call_the_shared_workflows(name: str, reusable: tuple[str, ...]) -> None:
+    text = (WORKFLOWS[0].parent / name).read_text()
+    for workflow in reusable:
+        assert f"uses: {GYST}{workflow}@" in text, f"{name} does not call GYST's {workflow}"
+
+
+def test_the_readme_lists_the_required_checks_the_workflows_produce() -> None:
+    development = README.split("\n## Development\n")[1].split("\n## ")[0]
+    for check in ("ci / CI green", "shell / CI green", "local jobs green"):
+        assert f"`{check}`" in development, f"README's Development section does not list the required check {check}"
+    ci = (WORKFLOWS[0].parent / "ci.yml").read_text()
+    assert "name: local jobs green" in ci and "\n  ci:\n" in ci and "\n  shell:\n" in ci
