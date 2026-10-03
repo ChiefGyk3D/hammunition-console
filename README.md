@@ -15,7 +15,7 @@ engine's own prompts); everything else about hardware, and maps, is left to the 
 
 ## Requirements
 
-- Hammunition 0.19.0 or later on `PATH` (the engine's `--json` interface, D-059). Install it first; this console never installs it.
+- Hammunition 0.20.0 or later on `PATH` (the engine's `--json` interface, D-059). Install it first; this console never installs it.
 - Python 3.11 or later and `python3-urwid` 2.6 or later. Measured archive versions: Debian 13 and Parrot 2.6.16, Ubuntu 24.04
   2.6.10, Ubuntu 26.04 and Kali 3.0.4.
 - A terminal of at least 80x24. It refuses to start without a terminal, with `TERM=dumb`, or as root.

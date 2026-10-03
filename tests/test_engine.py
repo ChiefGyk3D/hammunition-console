@@ -36,7 +36,7 @@ def test_unparsable_version_is_a_bad_document() -> None:
 
 
 def test_the_floor_is_the_measured_spike_version() -> None:
-    assert ENGINE_FLOOR == (0, 19, 0)
+    assert ENGINE_FLOOR == (0, 20, 0)
 
 
 def test_parse_a_recorded_document() -> None:
