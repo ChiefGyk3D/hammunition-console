@@ -124,6 +124,10 @@ python3 -m pytest          # also: ruff check . ; mypy ; python3 scripts/spdx.py
 into the venv. Fixtures are recorded by `scripts/capture_fixtures.py` from a real engine on a throwaway home with the station
 set to `N0CALL` and `FN31pr`, scrubbed, and scanned for identifiers; review every new fixture by eye before committing.
 
+`tests/test_verbs.py` checks the console's verb list against the engine's `docs/reference/json-interface.md`. That check is
+opt-in: `export HAMMUNITION_ENGINE_ROOT=/path/to/your/Hammunition/checkout` before running pytest, otherwise it is skipped
+and says why.
+
 A check is trusted only after you have broken the thing it watches and seen it fail with a message that names the fix. Never
 edit `CHANGELOG.md` in a pull request: add `changelog.d/<pr>.<kind>.md`.
 

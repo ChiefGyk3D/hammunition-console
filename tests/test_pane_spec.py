@@ -22,10 +22,6 @@ def test_the_consent_environment_never_reaches_the_child() -> None:
     assert spec.env["PATH"] == "/bin"
 
 
-def test_term_defaults_when_absent() -> None:
-    assert build_pane_spec(["hammunition", "install", "x"], "/s", {}).env["TERM"] == "xterm-256color"
-
-
 @pytest.mark.parametrize("bad", [["hammunition", "install", "x", "--yes"], ["hammunition", "install", "-y"],
                                  ["hammunition", "services", "start", "gpsd"], ["rm", "-rf", "/"]])
 def test_a_command_the_guard_refuses_never_becomes_a_pane(bad: list[str]) -> None:

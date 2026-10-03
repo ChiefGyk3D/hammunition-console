@@ -33,7 +33,8 @@ class PaneSpec:
 def build_pane_spec(argv: Sequence[str], status_path: str, environ: Mapping[str, str]) -> PaneSpec:
     checked = guard.checked_argv(argv)
     env = guard.scrubbed_environ(environ)
-    env.setdefault("TERM", "xterm-256color")
+    # No TERM default here: urwid.Terminal forces TERM=linux in the child whatever it is given
+    # (measured on urwid 2.6.16), so a default would be a no-op.
     return PaneSpec([sys.executable, str(RUNNER), status_path, "--", *checked], env)
 
 
