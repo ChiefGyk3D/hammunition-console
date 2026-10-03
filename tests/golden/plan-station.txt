@@ -1,0 +1,30 @@
+install station: planned. Nothing has been changed yet.
+R run this in a terminal pane   b back: changes nothing
+(any consent is typed by you, inside the pane)
+
+Units, in install order
+  chirp  apt  already installed  (requested by profile station)
+  flrig  apt  already installed  (requested by profile station)
+  gpsbabel  apt  already installed  (requested by profile station)
+  gpsd  apt  already installed  (requested by profile station)
+  gpsd-clients  apt  already installed  (requested by profile station)
+  gpsd-tools  apt  already installed  (requested by profile station)
+  hammunition-hill  binary  will fetch+install  (requested by profile station)
+  hammunition-tray  binary  will fetch+install  (requested by profile station)
+  libhamlib-utils  apt  already installed  (requested by profile station)
+  pipx  apt  already installed  (requested by profile station)
+  rig-service  apt  already installed  (requested by profile station)
+  twclock  apt  already installed  (requested by profile station)
+  tzwatch  apt  already installed  (requested by profile station)
+
+What will NOT happen
+  config rig-service: will not run hammunition-rigctld - station values not set: rig, rig_device
+     run `hammunition station set --rig <device> --rig-device <path>` (and --rig-baud or
+--rig-ptt-line for the rig's kind)
+  package hammunition-tray-qt: will not be installed (profile station) - for Xfce, LXQt, LXDE, MATE,
+Cinnamon; this machine has no Xfce or LXQt or LXDE or MATE or Cinnamon session (it has: KDE Plasma)
+     the rest installs without it; on a machine that gains a Xfce or LXQt or LXDE or MATE or
+Cinnamon session, `hammunition install station` again picks it up. For KDE Plasma, `hammunition
+install hammunition-tray`
+
+Records
