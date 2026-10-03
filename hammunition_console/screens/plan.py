@@ -162,8 +162,16 @@ class PlanScreen(Screen):
         self.runnable = False
 
     def on_show(self) -> None:
+        # The document is kept across re-shows (a plan can take minutes); `r` is the explicit re-plan.
+        if self.status.get("plan") in ("loading", "ok"):
+            self.redraw()
+            return
+        self.replan()
+
+    def replan(self) -> None:
         self.doc, self.runnable = None, False
-        self.load("plan", lambda: self.ctx.engine.read(self.action, *self.names, "--dry-run"), self._store)
+        # No timeout: `install navigation --dry-run` measured 9 m 49 s on the bench.
+        self.load("plan", lambda: self.ctx.engine.read(self.action, *self.names, "--dry-run", timeout=None), self._store)
         self.redraw()
 
     def _store(self, doc: Document) -> None:
@@ -173,7 +181,7 @@ class PlanScreen(Screen):
     def redraw(self) -> None:
         rows: list[urwid.Widget] = []
         if self.status.get("plan") == "loading":
-            rows.append(text("Planning (the engine resolves everything first; this can take a while)..."))
+            rows.append(text("planning... this can take minutes for map profiles"))
         elif self.status.get("plan") == "error":
             rows += [text(self.errors["plan"], "fail"), text(""), text("Nothing was run.")]
         elif self.doc is not None and not self.runnable:
@@ -197,6 +205,9 @@ class PlanScreen(Screen):
         if key == "R" and self.runnable:
             argv = self.ctx.engine.command(self.action, *self.names)
             self.ctx.run_pane(argv, f"{self.action} {' '.join(self.names)}", self._after_pane)
+            return None
+        if key == "r":
+            self.replan()
             return None
         return key
 

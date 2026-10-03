@@ -128,3 +128,13 @@ def test_the_floor_is_checked_on_every_document() -> None:
 
 def test_command_prefixes_the_binary() -> None:
     assert Engine(binary="hammunition").command("install", "station") == ["hammunition", "install", "station"]
+
+
+def test_the_default_timeout_is_180_and_none_is_passed_through() -> None:
+    rec = Recorder(json.dumps(load("status")))
+    eng = Engine(environ={"PATH": "/bin"}, run=rec)
+    eng.read("status")
+    assert rec.calls[0][1]["timeout"] == 180.0
+    rec2 = Recorder(json.dumps(load("plan-station")))
+    Engine(environ={"PATH": "/bin"}, run=rec2).read("install", "station", "--dry-run", timeout=None)
+    assert rec2.calls[0][1]["timeout"] is None

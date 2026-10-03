@@ -133,7 +133,7 @@ def test_capital_r_runs_the_real_command_in_a_pane_without_dry_run_or_json() -> 
     ctx = FakeContext()
     screen = PlanScreen(ctx, "install", ["station"])
     screen.on_show()
-    assert screen.keypress("r") == "r" and ctx.panes == []
+    assert screen.keypress("r") is None and ctx.panes == []  # lowercase r only re-plans
     assert screen.keypress("R") is None
     pane = ctx.panes[0]
     assert pane.argv == ["hammunition", "install", "station"] and pane.title == "install station"
@@ -257,3 +257,39 @@ def test_the_topo_size_consent_fixture_variant_is_shown() -> None:
     screen = PlanScreen(FakeContext(engine=engine), "install", ["station"])
     screen.on_show()
     assert "asked to type yes in the pane" in render(screen.widget(), 100, 60)
+
+
+def test_a_plan_is_read_once_across_re_shows_and_r_re_plans() -> None:
+    ctx = FakeContext()
+    screen = PlanScreen(ctx, "install", ["station"])
+    plans = lambda: [c for c in ctx.engine.calls if c[-1] == "--dry-run"]  # noqa: E731
+    screen.on_show()
+    screen.on_show()
+    assert len(plans()) == 1 and screen.doc is not None
+    assert screen.keypress("r") is None
+    assert len(plans()) == 2
+
+
+def test_dry_run_reads_have_no_timeout_and_other_reads_keep_the_default() -> None:
+    ctx = FakeContext()
+    PlanScreen(ctx, "install", ["station"]).on_show()
+    PlanScreen(ctx, "uninstall", ["station"]).on_show()
+    ctx.engine.read("status")
+    assert ctx.engine.timeouts[("install", "station", "--dry-run")] is None
+    assert ctx.engine.timeouts[("uninstall", "station", "--dry-run")] is None
+    assert ctx.engine.timeouts[("status",)] == 180.0
+
+
+def test_the_loading_line_warns_that_map_profiles_take_minutes() -> None:
+    from hammunition_console.worker import Background
+
+    class Held(Background):
+        def submit(self, call: Any, done: Any) -> None:
+            pass
+
+        def attach(self, loop: Any) -> None:
+            pass
+
+    screen = PlanScreen(FakeContext(bg=Held()), "install", ["navigation"])
+    screen.on_show()
+    assert "can take minutes for map profiles" in render(screen.widget(), 100, 10)

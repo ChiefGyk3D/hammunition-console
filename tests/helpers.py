@@ -58,6 +58,7 @@ class FakeEngine:
     def __init__(self, suffix: str = "", station: str = "set") -> None:
         self.suffix, self.station = suffix, station
         self.calls: list[tuple[str, ...]] = []
+        self.timeouts: dict[tuple[str, ...], float | None] = {}
         self.refused: list[tuple[str, ...]] = []  # reads with no --json form: a bug in a screen, however it is handled
         self._overrides: dict[tuple[str, ...], Document | BaseException] = {}
 
@@ -67,7 +68,8 @@ class FakeEngine:
     def set(self, words: Sequence[str], result: Document | BaseException) -> None:
         self._overrides[tuple(words)] = result
 
-    def read(self, *words: str, timeout: float = 0.0) -> Document:
+    def read(self, *words: str, timeout: float | None = 180.0) -> Document:
+        self.timeouts[tuple(words)] = timeout
         try:
             require_json_verb(words)
         except BaseException:

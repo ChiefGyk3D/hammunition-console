@@ -118,7 +118,9 @@ class Engine:
     def command(self, *words: str) -> list[str]:
         return [self.binary, *words]
 
-    def read(self, *words: str, timeout: float = 180.0) -> Document:
+    def read(self, *words: str, timeout: float | None = 180.0) -> Document:
+        """One document. `timeout=None` waits as long as the engine takes: the caller passes it
+        for `install`/`uninstall --dry-run`, which measured 9 m 49 s for a maps profile."""
         verbs.require_json_verb(words)
         guard.assert_clean_read(words)
         argv = [self.binary, *words, "--json"]
@@ -132,7 +134,7 @@ class Engine:
                 f"cannot work without it. Install the engine first: {INSTALL_PAGE} (run ./bootstrap.sh)."
             ) from exc
         except subprocess.TimeoutExpired as exc:
-            raise EngineError(f"`{' '.join(words)}` timed out after {int(timeout)} s") from exc
+            raise EngineError(f"`{' '.join(words)}` timed out after {int(timeout or 0)} s") from exc
         return accept(parse_document(done.stdout, done.returncode, done.stderr))
 
 
