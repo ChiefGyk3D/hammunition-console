@@ -7,7 +7,15 @@ import pytest
 import urwid
 
 from hammunition_console import __version__
-from hammunition_console.app import MIN_COLS, MIN_ROWS, Shell, SizeGuard, palette, write_crash_log
+from hammunition_console.app import (
+    MIN_COLS,
+    MIN_ROWS,
+    Shell,
+    SizeGuard,
+    palette,
+    run_guarded,
+    write_crash_log,
+)
 from hammunition_console.config import Config
 from hammunition_console.engine import EngineMissing, EngineTooOld
 from hammunition_console.screens.base import Screen, text
@@ -187,3 +195,35 @@ def test_crash_log_has_the_exception_type_and_frames_but_no_message(tmp_path: Pa
     assert "RuntimeError" in content and "inner" in content and __version__ in content
     assert sentinel not in content
     assert oct(path.stat().st_mode & 0o777) == "0o600"
+
+
+def test_a_too_small_terminal_blocks_every_key_but_q() -> None:
+    sh = make()
+    sh.open_screen("home")
+    sh.open_screen("install")
+    top: Stub = sh.stack[-1]  # type: ignore[assignment]
+    render(sh.root, 79, 24)
+    for key in ("R", "b", "esc", "?", "r"):
+        sh.handle_key(key)
+    assert [s.name for s in sh.stack] == ["home", "install"]
+    assert top.keys == [] and top.hidden == 0 and top.shown == 1
+    with pytest.raises(urwid.ExitMainLoop):
+        sh.handle_key("q")
+    render(sh.root, 80, 24)
+    sh.handle_key("R")
+    assert top.keys == ["R"]
+    sh.handle_key("b")
+    assert [s.name for s in sh.stack] == ["home"]
+
+
+def test_a_startup_crash_writes_the_crash_log_and_exits_one(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    def boom(ctx: Any, **kw: Any) -> Screen:
+        raise RuntimeError("callsign ZZ9SENTINEL")
+
+    sh = make()
+    sh.registry["home"] = boom
+    code = run_guarded(lambda: sh.open_screen("home"), {"XDG_CONFIG_HOME": str(tmp_path)}, sh)
+    assert code == 1
+    log = (tmp_path / "hammunition-console" / "crash.log").read_text()
+    assert "RuntimeError" in log and "ZZ9SENTINEL" not in log
+    assert "ZZ9SENTINEL" not in capsys.readouterr().err

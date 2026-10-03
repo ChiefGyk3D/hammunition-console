@@ -56,6 +56,7 @@ class SizeGuard(urwid.WidgetWrap):
 
     def __init__(self, inner: urwid.Widget) -> None:
         self._inner = inner
+        self.too_small = False
         super().__init__(inner)
 
     @staticmethod
@@ -63,7 +64,8 @@ class SizeGuard(urwid.WidgetWrap):
         return size[0] < MIN_COLS or size[1] < MIN_ROWS
 
     def render(self, size: Any, focus: bool = False) -> Any:
-        if self._too_small(size):
+        self.too_small = self._too_small(size)
+        if self.too_small:
             message = f"Please enlarge the terminal to at least {MIN_COLS}x{MIN_ROWS} (it is {size[0]}x{size[1]})."
             return urwid.Filler(urwid.Text(message), "top").render(size, focus)
         return self._inner.render(size, focus)
@@ -160,6 +162,11 @@ class Shell:
     def handle_key(self, key: Any) -> None:
         if not isinstance(key, str) or not self.stack:
             return
+        if isinstance(self.root, SizeGuard) and self.root.too_small:
+            # Only the message is on screen: no hidden screen may act on a key.
+            if key == "q":
+                raise urwid.ExitMainLoop
+            return
         top = self.stack[-1]
         if top.keypress(key) is None:
             return
@@ -230,11 +237,20 @@ def run(environ: Mapping[str, str]) -> int:
     loop_box.append(loop)
     bg.attach(loop)
     signal.signal(signal.SIGHUP, lambda *_: shell.hangup())
-    shell.open_screen("home")
-    if cfg.last_screen != "home":
-        shell.open_screen(cfg.last_screen)
+
+    def start(*_: Any) -> None:
+        shell.open_screen("home")
+        if cfg.last_screen != "home":
+            shell.open_screen(cfg.last_screen)
+
+    loop.set_alarm_in(0, start)  # the first on_show runs under the live loop
+    return run_guarded(loop.run, environ, shell)
+
+
+def run_guarded(body: Callable[[], object], environ: Mapping[str, str], shell: Shell) -> int:
+    """Run the loop; an exception from it (or a startup alarm) becomes a crash log and exit 1."""
     try:
-        loop.run()
+        body()
     except Exception as exc:
         path = write_crash_log(exc, config_mod.config_dir(environ), shell.shared.engine_version)
         where = f" Details (no message text) are in {path}." if path else ""
