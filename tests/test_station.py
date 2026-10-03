@@ -194,3 +194,19 @@ def test_engine_text_in_a_value_is_cleaned() -> None:
     body = {**load("station-set"), "mirror": "http://lan/\x1b[2J"}
     ctx.engine.set(("station", "show"), document("station", body))
     assert "\x1b" not in shown(ctx)[1]
+
+
+def test_the_region_chooser_hides_carried_regions_until_revealed_and_the_title_has_no_term() -> None:
+    ctx = sentinel_ctx()
+    screen, _ = shown(ctx)
+    row_for(screen, "map_regions").keypress((100,), "enter")
+    ctx.pushed[-1]._edit.set_edit_text("vermont")
+    ctx.pushed[-1].keypress("enter")
+    chooser = ctx.pushed[-1]
+    assert chooser.title == "Regions matching your search"
+    out = render(chooser.widget(), 100, 30)
+    assert "sentinelregion" not in out and "1 carried, hidden" in out
+    assert chooser.keypress("v") is None
+    assert "sentinelregion" in render(chooser.widget(), 100, 30)
+    chooser.on_hide()
+    assert "sentinelregion" not in render(chooser.widget(), 100, 30)

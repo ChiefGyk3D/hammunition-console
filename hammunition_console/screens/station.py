@@ -69,9 +69,13 @@ class ChooserScreen(Screen):
         selected: Sequence[str],
         on_apply: Callable[[list[str]], None],
         note: str = "",
+        hide_carried: bool = False,
     ) -> None:
         super().__init__(ctx)
         self.title = title
+        self.hide_carried = hide_carried
+        self.revealed = False
+        self._carried: list[str] = []
         self._load_items = load_items
         self.selected = list(selected)
         self._on_apply = on_apply
@@ -85,7 +89,12 @@ class ChooserScreen(Screen):
 
     def _store(self, items: list[tuple[str, str]]) -> None:
         known = {value for value, _ in items}
-        self._items = [(v, v) for v in self.selected if v not in known] + items
+        self._carried = [v for v in self.selected if v not in known]
+        self._items = ([] if self.hide_carried else [(v, v) for v in self._carried]) + items
+
+    def on_hide(self) -> None:
+        self.revealed = False
+        self.redraw()
 
     def redraw(self) -> None:
         rows: list[urwid.Widget] = [text(self._note, "dim"), text("Enter toggles; A applies the whole selection; b goes back and changes nothing.", "dim")]
@@ -95,11 +104,20 @@ class ChooserScreen(Screen):
             rows.append(text("Loading..."))
         elif self.status.get("items") == "error":
             rows.append(text(self.errors["items"], "fail"))
+        if self.hide_carried and self._carried:
+            if self.revealed:
+                for value in self._carried:
+                    rows.append(self._row(value, value))
+            else:
+                rows.append(text(f"{len(self._carried)} carried, hidden; press v to show.", "dim"))
         for value, label in self._items:
-            row = Row(f"[{'x' if value in self.selected else ' '}] {label}", value)
-            urwid.connect_signal(row, "activate", self._toggle)
-            rows.append(row)
+            rows.append(self._row(value, label))
         self.set_rows(rows)
+
+    def _row(self, value: str, label: str) -> Row:
+        row = Row(f"[{'x' if value in self.selected else ' '}] {label}", value)
+        urwid.connect_signal(row, "activate", self._toggle)
+        return row
 
     def _toggle(self, row: Row) -> None:
         value = str(row.value)
@@ -110,6 +128,10 @@ class ChooserScreen(Screen):
         self.redraw()
 
     def keypress(self, key: str) -> str | None:
+        if key == "v" and self.hide_carried:
+            self.revealed = not self.revealed
+            self.redraw()
+            return None
         if key == "A":
             if not self.selected:
                 self._hint = "Select at least one first. Nothing was run."
@@ -226,6 +248,7 @@ class StationScreen(Screen):
             return [(str(r), str(r)) for r in found] if isinstance(found, list) else []
 
         self.ctx.push(ChooserScreen(
-            self.ctx, f"Regions matching {term}", items, self._current("map_regions"),
+            self.ctx, "Regions matching your search", items, self._current("map_regions"),
             lambda ids: self._run(set_argv(self.ctx.engine.command, field, ",".join(ids)), f"station set {field.flag}"),
-            note="Replaces the whole list; regions you already carry are kept ticked."))
+            note="Replaces the whole list; regions you already carry are kept (v shows them).",
+            hide_carried=True))
