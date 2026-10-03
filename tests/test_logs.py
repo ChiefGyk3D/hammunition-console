@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2026 Renegade Penguin LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
+import os
 from pathlib import Path
 from typing import Any
 
@@ -181,3 +182,32 @@ def test_a_view_never_holds_more_than_the_line_cap(tmp_path: Path) -> None:
         handle.write("".join(f"l{i}\n" for i in range(6000)))
     ctx.timers.pop()[1]()
     assert len(view.lines) <= 5000 and view.lines[-1] == "l5999"
+
+
+def test_read_from_is_bounded_and_skips_a_large_gap(tmp_path: Path) -> None:
+    log = tmp_path / "g.log"
+    log.write_text("".join(f"row {i:05d}\n" for i in range(5000)))
+    text, offset = read_from(str(log), 0, max_bytes=1000) or ("", 0)
+    assert offset == log.stat().st_size and len(text) <= 1000 and "row 04999" in text and "row 00000" not in text
+    assert text.startswith("row ")
+
+
+def test_a_log_that_outgrows_the_cap_between_ticks_notes_the_gap(tmp_path: Path) -> None:
+    _, ctx, log = open_first(tmp_path, result="running")
+    view = ctx.pushed[-1]
+    with open(log, "a") as handle:
+        handle.write("".join(f"g{i:06d}\n" for i in range(20000)))
+    ctx.timers.pop()[1]()
+    assert "Skipped" in view.note and view.lines[-1] == "g019999" and view.following
+
+
+def test_rotation_between_the_read_and_the_size_check_is_calm(tmp_path: Path, monkeypatch: Any) -> None:
+    _, ctx, _ = open_first(tmp_path, result="running")
+    view = ctx.pushed[-1]
+
+    def gone(_path: str) -> int:
+        raise FileNotFoundError(_path)
+
+    monkeypatch.setattr(os.path, "getsize", gone)
+    ctx.timers.pop()[1]()
+    assert "rotated away" in view.note and view.following is False and ctx.timers == []

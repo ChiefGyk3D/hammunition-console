@@ -44,14 +44,23 @@ def read_tail(path: str, max_bytes: int = TAIL_BYTES) -> tuple[str, int]:
     return content, size
 
 
-def read_from(path: str, offset: int) -> tuple[str, int] | None:
+def read_from(path: str, offset: int, max_bytes: int = TAIL_BYTES) -> tuple[str, int] | None:
+    """New text since offset, at most max_bytes: a larger unread gap is skipped to the
+    last max_bytes (partial first line dropped). None when the file is gone."""
     try:
         with open(path, "rb") as handle:
-            handle.seek(offset)
-            data = handle.read()
+            size = os.fstat(handle.fileno()).st_size
+            start = offset
+            if size - offset > max_bytes:
+                start = size - max_bytes
+            handle.seek(start)
+            data = handle.read(max_bytes)
     except FileNotFoundError:
         return None
-    return data.decode("utf-8", errors="replace"), offset + len(data)
+    content = data.decode("utf-8", errors="replace")
+    if start > offset and "\n" in content:
+        content = content.split("\n", 1)[1]
+    return content, start + len(data)
 
 
 class LogViewScreen(Screen):
@@ -59,7 +68,7 @@ class LogViewScreen(Screen):
 
     def __init__(self, ctx: Context, path: str, directory: str, running: bool) -> None:
         super().__init__(ctx)
-        self.title = f"Log: {os.path.basename(path)}"
+        self.title = clean(f"Log: {os.path.basename(path)}")
         self._path, self._directory = path, directory
         self.following = running
         self.note = ""
@@ -91,21 +100,27 @@ class LogViewScreen(Screen):
     def _tick(self) -> None:
         if not self.following:
             return
-        if not is_inside(self._path, self._directory):
-            self.note, self.following = "The log was rotated away; no longer following.", False
-            self.redraw()
-            return
-        chunk = read_from(self._path, self._offset)
-        if chunk is None:
-            self.note, self.following = "The log was rotated away; no longer following.", False
-        else:
+        gone = "The log was rotated away; no longer following."
+        try:
+            if not is_inside(self._path, self._directory):
+                raise FileNotFoundError(self._path)
+            chunk = read_from(self._path, self._offset)
+            if chunk is None:
+                raise FileNotFoundError(self._path)
             content, new_offset = chunk
-            if new_offset < self._offset or (os.path.getsize(self._path) < self._offset):
+            size = os.path.getsize(self._path)
+            if size < self._offset:
                 self.note, self.lines = "The log was truncated; showing it again from the end.", []
                 content, new_offset = read_tail(self._path)
-            self._offset = new_offset
-            self._append(content)
-            self.ctx.after(FOLLOW_SECONDS, self._tick)
+            elif size - self._offset > TAIL_BYTES:
+                self.note = f"Skipped {size - self._offset - TAIL_BYTES} bytes of log that arrived between updates."
+        except OSError:
+            self.note, self.following = gone, False
+            self.redraw()
+            return
+        self._offset = new_offset
+        self._append(content)
+        self.ctx.after(FOLLOW_SECONDS, self._tick)
         self.redraw()
 
     def redraw(self) -> None:
