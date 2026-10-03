@@ -1,0 +1,10 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: Copyright (C) 2026 Renegade Penguin LLC
+# SPDX-License-Identifier: GPL-3.0-or-later
+# hammunition-console: run the package that sits beside bin/ with the system python3.
+# No virtualenv, no pip: the interpreter is whatever `python3` is on PATH (3.11 or later,
+# with python3-urwid installed from the distribution).
+here=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd -P) || exit 1
+PYTHONPATH="${here}${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH
+exec python3 -P -m hammunition_console "$@"
