@@ -19,8 +19,8 @@ from tests.helpers import FakeContext, render
 def test_shared_header_text_says_unknown_until_known_and_never_a_value() -> None:
     s = Shared()
     assert s.header_text() == "hammunition ? | ? | doctor ? | station ?"
-    s.engine_version, s.target, s.doctor, s.station_set = "0.19.0", "Debian 13", (1, 2, 20), True
-    assert s.header_text() == "hammunition 0.19.0 | Debian 13 | doctor 1F 2W | station set"
+    s.engine_version, s.target, s.doctor, s.station_set = "0.20.0", "Debian 13", (1, 2, 20), True
+    assert s.header_text() == "hammunition 0.20.0 | Debian 13 | doctor 1F 2W | station set"
     s.station_set = False
     assert s.header_text().endswith("station not set")
 

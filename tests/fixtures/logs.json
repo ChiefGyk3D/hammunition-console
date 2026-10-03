@@ -1,7 +1,7 @@
 {
   "schema": "hammunition/1",
   "kind": "logs",
-  "engine": "0.19.0",
+  "engine": "0.20.0",
   "directory": "/home/user/.local/state/hammunition/logs",
   "total_bytes": 4096,
   "max_files": 30,

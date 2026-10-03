@@ -1,7 +1,7 @@
 {
   "schema": "hammunition/1",
   "kind": "update",
-  "engine": "0.19.0",
+  "engine": "0.20.0",
   "target": {"distro": "debian", "version": "13", "arch": "x86_64", "id_like": [], "pretty_name": "Debian GNU/Linux 13 (trixie)", "description": "Debian GNU/Linux 13 (trixie) (ID=debian, version=13, arch=x86_64)", "debian_family": true},
   "from_log": true,
   "rows": [
