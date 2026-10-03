@@ -31,6 +31,7 @@ jobs:
     uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-ci.yml@0e58a0e61ea8b3800d1cb0e6ed81bb860ace2094 # v1.6.3
     permissions:
       contents: read
+      id-token: write  # python-ci declares it on its coverage job; GitHub checks declarations at startup
     with:
       python-versions: '["3.11", "3.13"]'
       install-command: |
