@@ -1,5 +1,15 @@
 # hammunition-console
 
+> **Archived on 2026-10-04. The console is now part of the Hammunition engine.**
+>
+> Install [Hammunition](https://github.com/ChiefGyk3D/Hammunition) and run `hammunition console`.
+> The code moved to `src/hammunition/console/` in that repository
+> ([Hammunition #302](https://github.com/ChiefGyk3D/Hammunition/issues/302),
+> [PR #331](https://github.com/ChiefGyk3D/Hammunition/pull/331)); one version, one install,
+> and the engine-older-than-console refusal cannot happen any more. Issues and pull requests
+> go there. The v0.1.0 release here stays for anyone who installed it; remove it with
+> `hammunition uninstall hammunition-console` after updating the engine.
+
 A full-screen terminal front end for the [Hammunition](https://github.com/ChiefGyk3D/Hammunition) engine. It shows what is
 installed, what is wrong and what to do next, and runs the engine's own commands for you, so a licensed operator can get from
 a fresh machine to a working station without remembering the CLI's verbs. It runs in a terminal; whether it works well over SSH or on a Raspberry Pi has not been measured.
