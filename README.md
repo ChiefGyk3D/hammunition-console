@@ -102,12 +102,12 @@ values until you ask.
 
 ## Status
 
-First release. What has run: the test suite (unit tests against fixtures recorded from the engine, a fake `hammunition` that
+v0.1.0, the first release. What has run: the test suite (unit tests against fixtures recorded from the engine, a fake `hammunition` that
 asks for `yes` on a real pseudo-terminal, and the console driven end to end in one) on Python 3.13 with urwid 2.6.16. The
 CI matrix also names Python 3.11 with urwid 2.6.10, urwid 3.0.4, and the Debian 13 and Ubuntu 24.04 archives' own
 `python3-urwid`; those jobs are unmeasured until CI has run them.
 
-What has not been run: a real `hammunition install` through the pane on a real target; urwid's `urwid.Terminal` against a
+What has not been run: the bench run on the field laptop (the target this was built for); a real `hammunition install` through the pane on a real target; urwid's `urwid.Terminal` against a
 real engine install on any machine; the engine's per-profile installed state and its `update` report for retired units
 (engine work E1 and E2) were built against recorded fixtures, so each screen that reads them shows "unknown" when they are
 absent; Raspberry Pi OS, Pop!_OS and Mint are inferred from their bases, not run. A claim about hardware belongs here only after

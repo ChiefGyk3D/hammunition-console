@@ -1,1 +1,0 @@
-- The engine floor is 0.20.0: the release that carries `list --json` members with installed sizes (E1) and retired units in `update --json` (E2), both of which the Install and Update screens read.
